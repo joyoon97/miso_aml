@@ -19,5 +19,28 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "질문하기",
+      "short_name": "질문하기",
+      "description": "새 질문을 바로 등록합니다",
+      "url": "./index.html?action=ask",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "공지사항",
+      "short_name": "공지사항",
+      "description": "공지사항을 바로 확인합니다",
+      "url": "./index.html?action=notice",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "자료실",
+      "short_name": "자료실",
+      "description": "자료실을 바로 확인합니다",
+      "url": "./index.html?action=res",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }

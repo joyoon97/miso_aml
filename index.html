@@ -378,6 +378,9 @@
     <input class="inp" id="rTitle" placeholder="자료 제목 (예: 2026년 AML 핵심요원 교육자료)">
     <textarea class="ta" id="rDesc" rows="3" placeholder="자료 설명 (선택)"></textarea>
     <label style="display:block;font-size:13px;font-weight:700;color:var(--navy);margin-bottom:6px">파일 첨부 (HWP, PDF, PPT, WORD, JPG, PNG)</label>
+    <p style="margin:-2px 0 8px;font-size:11.5px;color:var(--muted);line-height:1.5">
+      ※ 아이폰은 한글(HWP) 파일이 기본적으로 열리지 않습니다. 가능하면 PDF로 변환해서 올려주세요. HWP로 올릴 경우 아이폰에서는 무료 앱 "한컴오피스 Viewer" 설치 후 파일을 길게 눌러 공유 → 해당 앱으로 열면 됩니다.
+    </p>
     <input class="inp" id="rFile" type="file" accept=".hwp,.hwpx,.pdf,.ppt,.pptx,.doc,.docx,.jpg,.jpeg,.png" style="padding:9px">
     <input class="inp" id="rLink" placeholder="또는 자료 링크 입력 (구글드라이브 등 공유 URL)">
     <div class="btnRow">
@@ -439,7 +442,7 @@
   };
 
   var CATEGORIES = ["고객확인(CDD/EDD)","CTR 보고","STR 보고","교육·자격","제도·규정","기타"];
-  var RES_CATEGORIES = ["교육자료","유권해석사례집","업무매뉴얼","서식","기타"];
+  var RES_CATEGORIES = ["법령 및 규정","교육자료","유권해석사례집","업무매뉴얼","서식","기타"];
 
   var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -494,6 +497,24 @@
     setupPush();
     clearBadge();
     startRealtime();
+    handleShortcutAction();
+  }
+
+  // ═══ 홈 화면 아이콘 바로가기 처리 ═══
+  function handleShortcutAction(){
+    var params = new URLSearchParams(window.location.search);
+    var action = params.get("action");
+    if (!action) return;
+    if (action === "ask") {
+      switchTab("qna");
+      if (!isAdmin()) openQModal();
+    } else if (action === "notice") {
+      switchTab("notice");
+    } else if (action === "res") {
+      switchTab("res");
+    }
+    // URL을 깨끗하게 정리 (새로고침 시 매번 재실행되지 않도록)
+    try { window.history.replaceState({}, "", window.location.pathname); } catch(e){}
   }
 
   function doLogin(){
