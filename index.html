@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>미소신협 자금세탁방지 Q&A</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --navy: #1B2A4A; --yellow: #F5B301; --paper: #F7F6F2;
+    --ink: #22252B; --muted: #7A8090; --line: #E3E1DA; --red: #C0392B;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: 'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,sans-serif;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  input, textarea, select { font-family: inherit; font-size: 14px; }
+
+  /* ── 로그인 */
+  #loginPage {
+    min-height: 100vh; background: var(--navy);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .loginCard {
+    background: #fff; border-radius: 14px; border-top: 5px solid var(--yellow);
+    padding: 30px 28px 24px; width: 100%; max-width: 380px;
+  }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--yellow); font-weight: 700; }
+  .loginCard .eyebrow { color: #b8860b; }
+  h1 { margin: 6px 0 8px; font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+  .loginCard h1 { color: var(--navy); margin-bottom: 4px; }
+  .subText { margin: 0 0 22px; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+  .inp {
+    width: 100%; border: 1px solid var(--line); border-radius: 8px;
+    padding: 11px 12px; margin-bottom: 10px; background: #fff;
+  }
+  .btnMain {
+    background: var(--navy); color: #fff; border: none; border-radius: 8px;
+    padding: 9px 18px; font-size: 14px; font-weight: 700;
+  }
+  .btnYellow {
+    background: var(--yellow); color: var(--navy); border: none; border-radius: 8px;
+    padding: 9px 18px; font-size: 14px; font-weight: 800;
+  }
+  .btnGhost {
+    background: transparent; color: var(--muted); border: 1px solid var(--line);
+    border-radius: 8px; padding: 9px 16px; font-size: 14px;
+  }
+  .btnDel {
+    background: transparent; color: var(--red); border: 1px solid var(--red);
+    border-radius: 8px; padding: 9px 14px; font-size: 13px;
+  }
+  .errText { color: var(--red); font-size: 13px; margin-bottom: 10px; }
+  .loginFoot { margin: 14px 0 0; font-size: 12px; color: var(--muted); text-align: center; }
+
+  /* ── 헤더 */
+  header { background: var(--navy); color: #fff; }
+  .headInner {
+    max-width: 860px; margin: 0 auto; padding: 26px 20px 18px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 16px; flex-wrap: wrap;
+  }
+  header .subText { color: rgba(255,255,255,.75); margin-bottom: 0; }
+  .userBox { display: flex; align-items: center; gap: 10px; }
+  .userTag {
+    background: var(--yellow); color: var(--navy); font-weight: 800;
+    font-size: 13px; border-radius: 6px; padding: 6px 12px;
+  }
+  .btnLogout {
+    background: transparent; color: rgba(255,255,255,.85);
+    border: 1px solid rgba(255,255,255,.4); border-radius: 6px;
+    padding: 8px 14px; font-size: 13px;
+  }
+  .tabBar { border-top: 1px solid rgba(255,255,255,.12); }
+  .tabInner { max-width: 860px; margin: 0 auto; padding: 0 20px; display: flex; gap: 4px; }
+  .tabBtn {
+    background: transparent; color: rgba(255,255,255,.65); border: none;
+    border-bottom: 3px solid transparent; padding: 12px 16px;
+    font-size: 14.5px; font-weight: 600;
+  }
+  .tabBtn.on { color: #fff; border-bottom-color: var(--yellow); font-weight: 800; }
+  .pendingBar {
+    background: var(--yellow); color: var(--navy); font-size: 13px;
+    font-weight: 700; text-align: center; padding: 7px 12px;
+  }
+
+  /* ── 컨트롤/목록 */
+  .controls { max-width: 860px; margin: 20px auto 0; padding: 0 20px; }
+  .chipRow { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip {
+    background: #fff; border: 1px solid var(--line); border-radius: 999px;
+    padding: 6px 13px; font-size: 13px; color: var(--muted);
+  }
+  .chip.on { background: var(--navy); border-color: var(--navy); color: #fff; font-weight: 600; }
+  .ctrlRow { display: flex; gap: 8px; flex-wrap: wrap; }
+  .search { flex: 1; min-width: 180px; border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; }
+  .sel { border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; background: #fff; color: var(--ink); }
+  .list { max-width: 860px; margin: 18px auto 0; padding: 0 20px; display: grid; gap: 10px; }
+  .empty {
+    text-align: center; color: var(--muted); font-size: 14px; padding: 48px 0;
+    background: #fff; border: 1px dashed var(--line); border-radius: 10px;
+  }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; transition: box-shadow .15s ease; }
+  .card:hover { box-shadow: 0 2px 10px rgba(27,42,74,.08); }
+  .cardHead {
+    width: 100%; display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px; background: none; border: none; text-align: left;
+  }
+  .cardMeta { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; }
+  .catTag {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 4px;
+    padding: 2px 7px; font-size: 11.5px; color: var(--navy); font-weight: 700;
+  }
+  .metaText { font-size: 12px; color: var(--muted); }
+  .cardTitle { font-size: 15.5px; font-weight: 700; line-height: 1.4; }
+  .stampDone {
+    flex-shrink: 0; border: 2px solid var(--red); color: var(--red); border-radius: 6px;
+    padding: 4px 9px; font-size: 12px; font-weight: 800; letter-spacing: .05em;
+    transform: rotate(-4deg);
+  }
+  .stampWait {
+    flex-shrink: 0; border: 1.5px solid var(--muted); color: var(--muted);
+    border-radius: 6px; padding: 4px 9px; font-size: 12px; font-weight: 700;
+  }
+  .cardBody { border-top: 1px solid var(--line); padding: 14px 16px 16px; }
+  .qText { margin: 0; font-size: 14.5px; line-height: 1.7; white-space: pre-wrap; }
+  .answerBox {
+    margin-top: 14px; background: #FBF7EC; border: 1px solid #EAD9A8;
+    border-left: 4px solid var(--yellow); border-radius: 8px; padding: 12px 14px;
+  }
+  .answerHead { font-size: 13px; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
+  .ta {
+    width: 100%; border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 12px; resize: vertical; background: #fff; margin-bottom: 8px;
+  }
+  .btnRow { display: flex; gap: 8px; }
+  .resDesc { margin: 6px 0 0; font-size: 13.5px; color: var(--muted); line-height: 1.6; }
+  .resBtnCol { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+  .resLink {
+    background: var(--navy); color: #fff; border-radius: 8px; padding: 8px 14px;
+    font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap;
+  }
+  .btnDelSm {
+    background: transparent; color: var(--red); border: 1px solid var(--red);
+    border-radius: 6px; padding: 5px 10px; font-size: 12px;
+  }
+  footer {
+    max-width: 860px; margin: 24px auto 0; padding: 0 20px 60px;
+    font-size: 12px; color: var(--muted); line-height: 1.6;
+  }
+
+  /* ── 모달/토스트 */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(27,42,74,.45);
+    display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 100;
+  }
+  .modal {
+    background: #fff; border-radius: 12px; padding: 22px 22px 20px;
+    width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto;
+  }
+  .modalTitle { margin: 0 0 14px; font-size: 18px; font-weight: 800; color: var(--navy); }
+  .formRow { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+  .branchFixed {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
+    padding: 9px 14px; font-size: 14px; font-weight: 700; color: var(--navy); white-space: nowrap;
+  }
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--navy); color: #fff; border-radius: 8px; padding: 10px 18px;
+    font-size: 13.5px; z-index: 200; box-shadow: 0 4px 14px rgba(0,0,0,.2); display: none;
+  }
+  .hidden { display: none !important; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible {
+    outline: 2px solid var(--navy); outline-offset: 1px;
+  }
+  @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+</style>
+</head>
+<body>
+
+<!-- ══════ 로그인 화면 ══════ -->
+<div id="loginPage">
+  <div class="loginCard">
+    <div class="eyebrow">미소신용협동조합 · 평생어부바 🐷</div>
+    <h1>자금세탁방지 Q&A</h1>
+    <p class="subText">지점 계정으로 로그인해주세요.</p>
+    <input class="inp" id="loginId" placeholder="아이디" autocomplete="username">
+    <input class="inp" id="loginPw" type="password" placeholder="비밀번호" autocomplete="current-password">
+    <div class="errText hidden" id="loginErr">아이디 또는 비밀번호가 일치하지 않습니다.</div>
+    <button class="btnMain" style="width:100%;padding:12px" onclick="doLogin()">로그인</button>
+    <p class="loginFoot">계정 문의: 기획실</p>
+  </div>
+</div>
+
+<!-- ══════ 메인 화면 ══════ -->
+<div id="mainPage" class="hidden">
+  <header>
+    <div class="headInner">
+      <div>
+        <div class="eyebrow">미소신용협동조합 · 평생어부바 🐷</div>
+        <h1>자금세탁방지 Q&A</h1>
+        <p class="subText">AML 업무 중 궁금한 점을 올려주세요. 기획실에서 확인 후 답변드립니다.</p>
+      </div>
+      <div class="userBox">
+        <span class="userTag" id="userTag"></span>
+        <button class="btnLogout" onclick="logout()">로그아웃</button>
+      </div>
+    </div>
+    <div class="tabBar">
+      <div class="tabInner">
+        <button class="tabBtn on" id="tabQna" onclick="switchTab('qna')">질문 게시판</button>
+        <button class="tabBtn" id="tabRes" onclick="switchTab('res')">자료실</button>
+      </div>
+    </div>
+    <div class="pendingBar hidden" id="pendingBar"></div>
+  </header>
+
+  <!-- 질문 게시판 -->
+  <div id="qnaSection">
+    <div class="controls">
+      <div class="chipRow" id="qnaChips"></div>
+      <div class="ctrlRow">
+        <input class="search" id="qnaSearch" placeholder="제목·내용 검색" oninput="renderQna()">
+        <select class="sel" id="qnaStatus" onchange="renderQna()">
+          <option>전체</option><option>답변대기</option><option>답변완료</option>
+        </select>
+        <button class="btnYellow" id="askBtn" onclick="openModal('qModal')">+ 질문하기</button>
+      </div>
+    </div>
+    <div class="list" id="qnaList"><div class="empty">불러오는 중…</div></div>
+  </div>
+
+  <!-- 자료실 -->
+  <div id="resSection" class="hidden">
+    <div class="controls">
+      <div class="chipRow" id="resChips"></div>
+      <div class="ctrlRow">
+        <button class="btnYellow" onclick="openModal('rModal')">+ 자료 등록</button>
+      </div>
+    </div>
+    <div class="list" id="resList"></div>
+  </div>
+
+  <footer>
+    본 게시판의 내용은 로그인한 모든 지점이 함께 볼 수 있습니다. 고객 실명·계좌번호 등 개인정보는 입력하지 마세요.
+  </footer>
+</div>
+
+<!-- 질문 작성 모달 -->
+<div class="overlay hidden" id="qModal" onclick="if(event.target===this)closeModal('qModal')">
+  <div class="modal">
+    <h2 class="modalTitle">질문 등록</h2>
+    <div class="formRow">
+      <select class="sel" style="flex:1" id="qCat"></select>
+      <span class="branchFixed" id="qBranch"></span>
+    </div>
+    <input class="inp" id="qTitle" placeholder="제목">
+    <textarea class="ta" id="qContent" rows="6" placeholder="질문 내용 (고객 개인정보는 입력하지 마세요)"></textarea>
+    <input class="inp" id="qAuthor" placeholder="작성자 (미입력 시 익명)">
+    <div class="btnRow">
+      <button class="btnMain" id="qSubmit" onclick="submitQuestion()">등록</button>
+      <button class="btnGhost" onclick="closeModal('qModal')">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 자료 등록 모달 -->
+<div class="overlay hidden" id="rModal" onclick="if(event.target===this)closeModal('rModal')">
+  <div class="modal">
+    <h2 class="modalTitle">자료 등록</h2>
+    <div class="formRow" style="justify-content:flex-end">
+      <span class="branchFixed" id="rBranch"></span>
+    </div>
+    <select class="sel" style="width:100%;margin-bottom:10px" id="rCat"></select>
+    <input class="inp" id="rTitle" placeholder="자료 제목 (예: 2026년 AML 핵심요원 교육자료)">
+    <textarea class="ta" id="rDesc" rows="3" placeholder="자료 설명 (선택)"></textarea>
+    <input class="inp" id="rLink" placeholder="자료 링크 (구글드라이브 등 공유 링크 URL)">
+    <div class="btnRow">
+      <button class="btnMain" id="rSubmit" onclick="submitResource()">등록</button>
+      <button class="btnGhost" onclick="closeModal('rModal')">취소</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // ═══════════════════════════════════════════════
+  // Supabase 연결 정보 — 본인 프로젝트 값으로 교체하세요
+  // (Supabase 대시보드 → Settings → API)
+  var SUPABASE_URL = "https://nbiibkmmcbrpdaothbpq.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_bxXxKM_2NBTyRtijin0f6Q_RMR9qKTp";
+  // ═══════════════════════════════════════════════
+
+  // 계정 정보 (아이디 = 비밀번호)
+  var ACCOUNTS = {
+    miso06: { pw: "miso06", branch: "정왕본점", role: "branch" },
+    miso01: { pw: "miso01", branch: "목감지점", role: "branch" },
+    miso02: { pw: "miso02", branch: "연성지점", role: "branch" },
+    miso03: { pw: "miso03", branch: "월곶지점", role: "branch" },
+    miso04: { pw: "miso04", branch: "하중지점", role: "branch" },
+    miso07: { pw: "miso07", branch: "배곧지점", role: "branch" },
+    miso:   { pw: "miso",   branch: "기획실",   role: "admin"  }
+  };
+
+  var CATEGORIES = ["고객확인(CDD/EDD)","STR/CTR 보고","영장·임의보고","교육·자격","제도·규정","기타"];
+  var RES_CATEGORIES = ["교육자료","유권해석사례집","업무매뉴얼","서식","기타"];
+
+  var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  var user = null;
+  var questions = [], resources = [];
+  var qnaFilter = "전체", resFilter = "전체";
+  var expandedId = null;
+  var answerDrafts = {};
+
+  // ── 유틸
+  function $(id){ return document.getElementById(id); }
+  function esc(s){
+    return String(s == null ? "" : s)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+  function fmt(iso){
+    if (!iso) return "";
+    var d = new Date(iso);
+    var p = function(n){ return String(n).padStart(2,"0"); };
+    return d.getFullYear() + "." + p(d.getMonth()+1) + "." + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+  function toast(msg){
+    var t = $("toast"); t.textContent = msg; t.style.display = "block";
+    clearTimeout(t._tm); t._tm = setTimeout(function(){ t.style.display = "none"; }, 2500);
+  }
+  function openModal(id){ $(id).classList.remove("hidden"); }
+  function closeModal(id){ $(id).classList.add("hidden"); }
+  function isAdmin(){ return user && user.role === "admin"; }
+
+  // ── 로그인
+  function doLogin(){
+    var id = $("loginId").value.trim().toLowerCase();
+    var pw = $("loginPw").value;
+    var acc = ACCOUNTS[id];
+    if (acc && acc.pw === pw) {
+      user = { branch: acc.branch, role: acc.role };
+      $("loginErr").classList.add("hidden");
+      $("loginPage").classList.add("hidden");
+      $("mainPage").classList.remove("hidden");
+      $("userTag").textContent = user.branch + (isAdmin() ? " (관리자)" : "");
+      $("qBranch").textContent = user.branch;
+      $("rBranch").textContent = user.branch;
+      $("askBtn").classList.toggle("hidden", isAdmin());
+      initChips(); initSelects(); loadData();
+    } else {
+      $("loginErr").classList.remove("hidden");
+    }
+  }
+  $("loginId").addEventListener("keydown", function(e){ if(e.key==="Enter") doLogin(); });
+  $("loginPw").addEventListener("keydown", function(e){ if(e.key==="Enter") doLogin(); });
+
+  function logout(){
+    user = null; expandedId = null;
+    $("mainPage").classList.add("hidden");
+    $("loginPage").classList.remove("hidden");
+    $("loginId").value = ""; $("loginPw").value = "";
+    switchTab("qna");
+  }
+
+  // ── 초기화
+  function initChips(){
+    $("qnaChips").innerHTML = ["전체"].concat(CATEGORIES).map(function(c){
+      return '<button class="chip'+(qnaFilter===c?" on":"")+'" onclick="setQnaFilter(\''+esc(c)+'\')">'+esc(c)+'</button>';
+    }).join("");
+    $("resChips").innerHTML = ["전체"].concat(RES_CATEGORIES).map(function(c){
+      return '<button class="chip'+(resFilter===c?" on":"")+'" onclick="setResFilter(\''+esc(c)+'\')">'+esc(c)+'</button>';
+    }).join("");
+  }
+  function initSelects(){
+    $("qCat").innerHTML = CATEGORIES.map(function(c){ return "<option>"+esc(c)+"</option>"; }).join("");
+    $("rCat").innerHTML = RES_CATEGORIES.map(function(c){ return "<option>"+esc(c)+"</option>"; }).join("");
+  }
+  function setQnaFilter(c){ qnaFilter = c; initChips(); renderQna(); }
+  function setResFilter(c){ resFilter = c; initChips(); renderRes(); }
+
+  function switchTab(t){
+    $("tabQna").classList.toggle("on", t==="qna");
+    $("tabRes").classList.toggle("on", t==="res");
+    $("qnaSection").classList.toggle("hidden", t!=="qna");
+    $("resSection").classList.toggle("hidden", t!=="res");
+  }
+
+  // ── 데이터 로드
+  async function loadData(){
+    try {
+      var q = await db.from("questions").select("*").order("created_at", { ascending: false });
+      var r = await db.from("resources").select("*").order("created_at", { ascending: false });
+      if (q.error || r.error) throw (q.error || r.error);
+      questions = q.data || [];
+      resources = r.data || [];
+      renderQna(); renderRes(); renderPending();
+    } catch (e) {
+      toast("데이터를 불러오지 못했습니다. 연결 정보를 확인해주세요.");
+      $("qnaList").innerHTML = '<div class="empty">데이터를 불러오지 못했습니다.</div>';
+    }
+  }
+  function renderPending(){
+    var n = questions.filter(function(q){ return !q.answer; }).length;
+    var bar = $("pendingBar");
+    if (isAdmin() && n > 0) {
+      bar.textContent = "답변 대기 중인 질문 " + n + "건";
+      bar.classList.remove("hidden");
+    } else {
+      bar.classList.add("hidden");
+    }
+  }
+
+  // ── 질문 게시판 렌더링
+  function renderQna(){
+    var s = $("qnaSearch").value.trim().toLowerCase();
+    var stat = $("qnaStatus").value;
+    var list = questions.filter(function(q){
+      if (qnaFilter !== "전체" && q.category !== qnaFilter) return false;
+      if (stat === "답변대기" && q.answer) return false;
+      if (stat === "답변완료" && !q.answer) return false;
+      if (s && ((q.title||"") + (q.content||"") + (q.answer||"")).toLowerCase().indexOf(s) < 0) return false;
+      return true;
+    });
+    var el = $("qnaList");
+    if (list.length === 0) {
+      el.innerHTML = '<div class="empty">' + (questions.length===0 ? "아직 등록된 질문이 없습니다. 첫 질문을 올려보세요." : "조건에 맞는 질문이 없습니다.") + "</div>";
+      return;
+    }
+    el.innerHTML = list.map(function(q){
+      var open = expandedId === q.id;
+      var html = '<article class="card">' +
+        '<button class="cardHead" onclick="toggleQ(\''+esc(q.id)+'\')">' +
+          '<div style="flex:1;min-width:0">' +
+            '<div class="cardMeta"><span class="catTag">'+esc(q.category)+'</span>' +
+            '<span class="metaText">'+esc(q.branch)+' · '+esc(q.author)+' · '+fmt(q.created_at)+'</span></div>' +
+            '<div class="cardTitle">'+esc(q.title)+'</div>' +
+          '</div>' +
+          (q.answer ? '<span class="stampDone">답변완료</span>' : '<span class="stampWait">답변대기</span>') +
+        '</button>';
+      if (open) {
+        html += '<div class="cardBody"><p class="qText">'+esc(q.content)+'</p>';
+        if (q.answer) {
+          html += '<div class="answerBox"><div class="answerHead">기획실 답변 <span class="metaText">'+fmt(q.answered_at)+'</span></div>' +
+                  '<p class="qText">'+esc(q.answer)+'</p></div>';
+        }
+        if (isAdmin()) {
+          var draft = answerDrafts[q.id] != null ? answerDrafts[q.id] : (q.answer || "");
+          html += '<div style="margin-top:14px">' +
+            '<textarea class="ta" rows="4" id="ans_'+esc(q.id)+'" placeholder="'+(q.answer?"답변 수정 내용 입력":"답변 입력")+'" oninput="answerDrafts[\''+esc(q.id)+'\']=this.value">'+esc(draft)+'</textarea>' +
+            '<div class="btnRow">' +
+              '<button class="btnMain" onclick="submitAnswer(\''+esc(q.id)+'\')">'+(q.answer?"답변 수정":"답변 등록")+'</button>' +
+              '<button class="btnDel" onclick="deleteQuestion(\''+esc(q.id)+'\')">질문 삭제</button>' +
+            '</div></div>';
+        }
+        html += '</div>';
+      }
+      return html + '</article>';
+    }).join("");
+  }
+  function toggleQ(id){ expandedId = (expandedId === id) ? null : id; renderQna(); }
+
+  // ── 자료실 렌더링
+  function renderRes(){
+    var list = resources.filter(function(r){
+      return resFilter === "전체" || r.category === resFilter;
+    });
+    var el = $("resList");
+    if (list.length === 0) {
+      el.innerHTML = '<div class="empty">' + (resources.length===0 ? "아직 등록된 자료가 없습니다." : "조건에 맞는 자료가 없습니다.") + "</div>";
+      return;
+    }
+    el.innerHTML = list.map(function(r){
+      var canDel = isAdmin() || r.branch === user.branch;
+      return '<article class="card"><div class="cardHead" style="cursor:default">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div class="cardMeta"><span class="catTag">'+esc(r.category)+'</span>' +
+          '<span class="metaText">'+esc(r.branch)+' · '+fmt(r.created_at)+'</span></div>' +
+          '<div class="cardTitle">'+esc(r.title)+'</div>' +
+          (r.descr ? '<p class="resDesc">'+esc(r.descr)+'</p>' : '') +
+        '</div>' +
+        '<div class="resBtnCol">' +
+          (r.link ? '<a class="resLink" href="'+esc(r.link)+'" target="_blank" rel="noreferrer">자료 열기</a>' : '') +
+          (canDel ? '<button class="btnDelSm" onclick="deleteResource(\''+esc(r.id)+'\')">삭제</button>' : '') +
+        '</div></div></article>';
+    }).join("");
+  }
+
+  // ── 동작
+  async function submitQuestion(){
+    var title = $("qTitle").value.trim(), content = $("qContent").value.trim();
+    if (!title || !content) { toast("제목과 내용을 입력해주세요."); return; }
+    $("qSubmit").disabled = true; $("qSubmit").textContent = "등록 중…";
+    try {
+      var res = await db.from("questions").insert({
+        title: title, content: content,
+        category: $("qCat").value, branch: user.branch,
+        author: $("qAuthor").value.trim() || "익명"
+      });
+      if (res.error) throw res.error;
+      $("qTitle").value = ""; $("qContent").value = ""; $("qAuthor").value = "";
+      closeModal("qModal"); toast("질문이 등록되었습니다.");
+      await loadData();
+    } catch (e) {
+      toast("등록에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      $("qSubmit").disabled = false; $("qSubmit").textContent = "등록";
+    }
+  }
+
+  async function submitAnswer(id){
+    var el = $("ans_"+id);
+    var text = (el ? el.value : "").trim();
+    if (!text) { toast("답변 내용을 입력해주세요."); return; }
+    try {
+      var res = await db.from("questions").update({
+        answer: text, answered_at: new Date().toISOString()
+      }).eq("id", id);
+      if (res.error) throw res.error;
+      delete answerDrafts[id];
+      toast("답변이 등록되었습니다.");
+      await loadData();
+    } catch (e) {
+      toast("저장에 실패했습니다. 다시 시도해주세요.");
+    }
+  }
+
+  async function deleteQuestion(id){
+    if (!confirm("이 질문을 삭제할까요?")) return;
+    try {
+      var res = await db.from("questions").delete().eq("id", id);
+      if (res.error) throw res.error;
+      toast("삭제되었습니다.");
+      await loadData();
+    } catch (e) {
+      toast("삭제에 실패했습니다.");
+    }
+  }
+
+  async function submitResource(){
+    var title = $("rTitle").value.trim();
+    if (!title) { toast("자료 제목을 입력해주세요."); return; }
+    $("rSubmit").disabled = true; $("rSubmit").textContent = "등록 중…";
+    try {
+      var res = await db.from("resources").insert({
+        title: title, category: $("rCat").value,
+        descr: $("rDesc").value.trim(), link: $("rLink").value.trim(),
+        branch: user.branch
+      });
+      if (res.error) throw res.error;
+      $("rTitle").value = ""; $("rDesc").value = ""; $("rLink").value = "";
+      closeModal("rModal"); toast("자료가 등록되었습니다.");
+      await loadData();
+    } catch (e) {
+      toast("등록에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      $("rSubmit").disabled = false; $("rSubmit").textContent = "등록";
+    }
+  }
+
+  async function deleteResource(id){
+    if (!confirm("이 자료를 삭제할까요?")) return;
+    try {
+      var res = await db.from("resources").delete().eq("id", id);
+      if (res.error) throw res.error;
+      toast("삭제되었습니다.");
+      await loadData();
+    } catch (e) {
+      toast("삭제에 실패했습니다.");
+    }
+  }
+</script>
+</body>
+</html>
