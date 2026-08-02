@@ -86,15 +86,22 @@
   }
   header .subText { color: rgba(255,255,255,.75); margin-bottom: 0; }
   .userBox { display: flex; align-items: center; gap: 10px; }
+  .topBar {
+    max-width: 860px; margin: 0 auto; padding: 10px 20px 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
   .userTag {
     background: var(--yellow); color: var(--navy); font-weight: 800;
-    font-size: 13px; border-radius: 6px; padding: 6px 12px;
+    font-size: 12.5px; border-radius: 6px; padding: 5px 11px;
   }
-  .btnLogout {
-    background: transparent; color: rgba(255,255,255,.85);
-    border: 1px solid rgba(255,255,255,.4); border-radius: 6px;
-    padding: 8px 14px; font-size: 13px;
+  .iconBtnRow { display: flex; align-items: center; gap: 8px; }
+  .iconBtn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3);
+    color: #fff; font-size: 16px; display: flex; align-items: center; justify-content: center;
+    padding: 0; line-height: 1;
   }
+  .iconBtn:active { background: rgba(255,255,255,.25); }
   .tabBar { border-top: 1px solid rgba(255,255,255,.12); }
   .tabInner { max-width: 860px; margin: 0 auto; padding: 0 20px; display: flex; gap: 4px; }
   .tabBtn {
@@ -294,16 +301,18 @@
 <!-- ══════ 메인 화면 ══════ -->
 <div id="mainPage" class="hidden">
   <header>
+    <div class="topBar">
+      <span class="userTag" id="userTag"></span>
+      <div class="iconBtnRow">
+        <button class="iconBtn" onclick="checkPush()" title="알림 상태" aria-label="알림 상태">🔔</button>
+        <button class="iconBtn" onclick="logout()" title="로그아웃" aria-label="로그아웃">🚪</button>
+      </div>
+    </div>
     <div class="headInner">
       <div>
         <div class="eyebrow"><img class="ciLogo" src="icons/logo.png" alt="">미소신용협동조합 · 평생어부바 🐷</div>
         <h1>자금세탁방지 Q&A</h1>
         <p class="subText">AML 업무 중 궁금한 점을 올려주세요. 관리자가 확인 후 답변드립니다.</p>
-      </div>
-      <div class="userBox">
-        <span class="userTag" id="userTag"></span>
-        <button class="btnLogout" onclick="checkPush()">알림 상태</button>
-        <button class="btnLogout" onclick="logout()">로그아웃</button>
       </div>
     </div>
     <div class="tabBar">
@@ -472,6 +481,7 @@
 
   // ── 유틸
   function $(id){ return document.getElementById(id); }
+  function shortBranch(name){ return (name || "").replace(/(지점|본점)$/, ""); }
   function esc(s){
     return String(s == null ? "" : s)
       .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
@@ -534,7 +544,7 @@
     $("loginErr").classList.add("hidden");
     $("loginPage").classList.add("hidden");
     $("mainPage").classList.remove("hidden");
-    $("userTag").textContent = user.branch;
+    $("userTag").textContent = shortBranch(user.branch);
     $("qBranch").textContent = user.branch;
     $("rBranch").textContent = user.branch;
     $("askBtn").classList.toggle("hidden", isAdmin());
