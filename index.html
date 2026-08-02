@@ -107,13 +107,13 @@
   }
   .iconBtn:active { background: rgba(255,255,255,.25); }
   .tabBar { border-top: 1px solid rgba(255,255,255,.12); }
-  .tabInner { max-width: 860px; margin: 0 auto; padding: 0 12px; display: flex; gap: 2px; overflow-x: auto; }
+  .tabInner { max-width: 860px; margin: 0 auto; padding: 8px 12px; display: flex; gap: 6px; overflow-x: auto; }
   .tabBtn {
-    background: transparent; color: rgba(255,255,255,.65); border: none;
-    border-bottom: 3px solid transparent; padding: 12px 10px;
+    background: rgba(255,255,255,.08); color: rgba(255,255,255,.75); border: none;
+    border-radius: 999px; padding: 8px 12px;
     font-size: 12.5px; font-weight: 600; white-space: nowrap; flex-shrink: 0;
   }
-  .tabBtn.on { color: var(--cyan); border-bottom-color: var(--cyan); font-weight: 800; }
+  .tabBtn.on { background: var(--cyan); color: #fff; font-weight: 800; }
   .pendingBar {
     background: var(--cyan); color: #fff; font-size: 13px;
     font-weight: 700; text-align: center; padding: 7px 12px;
@@ -334,8 +334,8 @@
       <div class="tabInner">
         <button class="tabBtn on" id="tabQna" onclick="switchTab('qna')">질문 게시판</button>
         <button class="tabBtn" id="tabNotice" onclick="switchTab('notice')">공지사항</button>
-        <button class="tabBtn" id="tabPopular" onclick="switchTab('popular')">자주 묻는 질문</button>
         <button class="tabBtn" id="tabRes" onclick="switchTab('res')">자료실</button>
+        <button class="tabBtn" id="tabPopular" onclick="switchTab('popular')">자주 묻는 질문</button>
       </div>
     </div>
     <div class="pendingBar hidden" id="pendingBar"></div>
