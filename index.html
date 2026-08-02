@@ -844,6 +844,26 @@
   }
 
   // ── 자료실 렌더링
+  var expandedResId = null;
+
+  // 워드/엑셀/PPT는 브라우저가 직접 못 열어서 온라인 뷰어로 감싸 바로 보이게 처리
+  // PDF/이미지는 브라우저가 원래 새 탭에서 바로 보여줌
+  // HWP는 지원되는 공인 온라인 뷰어가 없어 다운로드로 안내
+  function resolvePreviewUrl(link){
+    if (!link) return { url: "", note: "" };
+    var m = link.split("?")[0].match(/\.([a-zA-Z0-9]+)$/);
+    var ext = m ? m[1].toLowerCase() : "";
+    if (["doc","docx","ppt","pptx","xls","xlsx"].indexOf(ext) >= 0) {
+      return { url: "https://view.officeapps.live.com/op/view.aspx?src=" + encodeURIComponent(link), note: "" };
+    }
+    if (["hwp","hwpx"].indexOf(ext) >= 0) {
+      return { url: link, note: "한글(HWP) 파일은 온라인 미리보기가 지원되지 않아 다운로드됩니다. 아이폰은 \"한컴오피스 Viewer\" 앱으로 열어주세요." };
+    }
+    return { url: link, note: "" };
+  }
+
+  function toggleRes(id){ expandedResId = (expandedResId === id) ? null : id; renderRes(); }
+
   function renderRes(){
     var list = resources.filter(function(r){
       return resFilter === "전체" || r.category === resFilter;
@@ -854,19 +874,37 @@
       return;
     }
     el.innerHTML = list.map(function(r){
+      var open = expandedResId === r.id;
       var canDel = isAdmin() || r.branch === user.branch;
-      return '<article class="card"><div class="cardHead" style="cursor:default">' +
-        '<div style="flex:1;min-width:0">' +
-          '<div class="cardMeta"><span class="catTag">'+esc(r.category)+'</span>' +
-          '<span class="metaText">'+esc(r.branch)+' · '+fmt(r.created_at)+'</span></div>' +
-          '<div class="cardTitle">'+esc(r.title)+'</div>' +
-          (r.descr ? '<p class="resDesc">'+esc(r.descr)+'</p>' : '') +
-        '</div>' +
-        '<div class="resBtnCol">' +
-          (r.link ? '<a class="resLink" href="'+esc(r.link)+'" target="_blank" rel="noreferrer">자료 열기</a>' : '') +
-          (canDel ? '<button class="btnGhost" style="padding:5px 10px;font-size:12px" onclick="openEditResource(\''+esc(r.id)+'\')">수정</button>' : '') +
-          (canDel ? '<button class="btnDelSm" onclick="deleteResource(\''+esc(r.id)+'\')">삭제</button>' : '') +
-        '</div></div></article>';
+      var isLaw = r.category === "법령 및 규정";
+      var btnLabel = isLaw ? "원문 들어가기" : "자료 열기";
+      var prev = resolvePreviewUrl(r.link);
+
+      var html = '<article class="card">' +
+        '<button class="cardHead" onclick="toggleRes(\''+esc(r.id)+'\')">' +
+          '<div style="flex:1;min-width:0">' +
+            '<div class="cardMeta"><span class="catTag">'+esc(r.category)+'</span>' +
+            '<span class="metaText">'+esc(r.branch)+' · '+fmt(r.created_at)+'</span></div>' +
+            '<div class="cardTitle">'+esc(r.title)+'</div>' +
+          '</div>' +
+        '</button>';
+
+      if (open) {
+        html += '<div class="cardBody">';
+        if (r.descr) html += '<p class="qText" style="margin-bottom:12px">'+esc(r.descr)+'</p>';
+        if (prev.note) html += '<p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">'+esc(prev.note)+'</p>';
+        html += '<div class="btnRow" style="flex-wrap:wrap">';
+        if (r.link) {
+          html += '<a class="btnMain" style="text-decoration:none;display:inline-block" href="'+esc(prev.url)+'" target="_blank" rel="noreferrer">'+btnLabel+'</a>';
+        }
+        if (canDel) {
+          html += '<button class="btnGhost" onclick="openEditResource(\''+esc(r.id)+'\')">수정</button>';
+          html += '<button class="btnDel" onclick="deleteResource(\''+esc(r.id)+'\')">삭제</button>';
+        }
+        html += '</div></div>';
+      }
+      html += '</article>';
+      return html;
     }).join("");
   }
 
