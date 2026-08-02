@@ -31,7 +31,7 @@ self.addEventListener("push", function (e) {
     self.registration.showNotification(data.title || "AML Q&A", {
       body: data.body || "",
       icon: "icons/icon-192.png",
-      badge: "icons/icon-192.png"
+      badge: "icons/badge-96.png"
     })
   );
 });

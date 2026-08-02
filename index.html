@@ -263,6 +263,14 @@
     <p class="subText">지점 계정으로 로그인해주세요.</p>
     <input class="inp" id="loginId" placeholder="아이디" autocomplete="username">
     <input class="inp" id="loginPw" type="password" placeholder="비밀번호" autocomplete="current-password">
+    <div style="display:flex;gap:16px;margin:-2px 0 12px;font-size:13px;color:var(--muted)">
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer">
+        <input type="checkbox" id="rememberId" style="width:15px;height:15px">아이디 기억하기
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer">
+        <input type="checkbox" id="autoLogin" style="width:15px;height:15px">자동 로그인
+      </label>
+    </div>
     <div class="errText hidden" id="loginErr">아이디 또는 비밀번호가 일치하지 않습니다.</div>
     <button class="btnMain" style="width:100%;padding:12px" onclick="doLogin()">로그인</button>
     <p class="loginFoot">계정 문의: 관리자</p>
@@ -494,19 +502,31 @@
     var acc = ACCOUNTS[id];
     if (acc && acc.pw === pw) {
       user = { id: id, branch: acc.branch, role: acc.role };
-      try { localStorage.setItem("misoAmlUser", JSON.stringify(user)); } catch(e){}
+      try {
+        if ($("rememberId").checked) localStorage.setItem("misoAmlSavedId", id);
+        else localStorage.removeItem("misoAmlSavedId");
+        if ($("autoLogin").checked) localStorage.setItem("misoAmlUser", JSON.stringify(user));
+        else localStorage.removeItem("misoAmlUser");
+      } catch(e){}
       enterMain();
     } else {
       $("loginErr").classList.remove("hidden");
     }
   }
 
-  // 새로고침 시 로그인 유지
+  // 저장된 아이디 불러오기 / 자동 로그인 복원
+  try {
+    var savedId = localStorage.getItem("misoAmlSavedId");
+    if (savedId) { $("loginId").value = savedId; $("rememberId").checked = true; }
+  } catch(e){}
   try {
     var saved = localStorage.getItem("misoAmlUser");
     if (saved) {
       var u = JSON.parse(saved);
-      if (u && u.id && u.branch && u.role && ACCOUNTS[u.id]) { user = u; enterMain(); }
+      if (u && u.id && u.branch && u.role && ACCOUNTS[u.id]) {
+        $("autoLogin").checked = true;
+        user = u; enterMain();
+      }
     }
   } catch(e){}
   $("loginId").addEventListener("keydown", function(e){ if(e.key==="Enter") doLogin(); });
