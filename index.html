@@ -13,6 +13,20 @@
 <meta name="apple-mobile-web-app-title" content="AML Q&A">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+  @font-face {
+    font-family: '신협나눔체';
+    src: url('fonts/CUNanum-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: '신협나눔체';
+    src: url('fonts/CUNanum-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+  }
   :root {
     --navy: #0056a7; --yellow: #d8a100; --cyan: #00afd5; --paper: #F5F7F9;
     --ink: #22252B; --muted: #7A8090; --line: #DDE3E8; --red: #C0392B;
@@ -20,7 +34,7 @@
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--paper); color: var(--ink);
-    font-family: 'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,sans-serif;
+    font-family: '신협나눔체','Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,sans-serif;
   }
   button { font-family: inherit; cursor: pointer; }
   input, textarea, select { font-family: inherit; font-size: 14px; }
@@ -327,7 +341,7 @@
   <div id="noticeSection" class="hidden">
     <div class="controls">
       <div class="ctrlRow">
-        <button class="btnYellow hidden" id="noticeAddBtn" onclick="openModal('nModal')">+ 공지 등록</button>
+        <button class="btnYellow hidden" id="noticeAddBtn" onclick="resetNForm();openModal('nModal')">+ 공지 등록</button>
       </div>
     </div>
     <div class="list" id="noticeList"></div>
@@ -399,12 +413,12 @@
 <!-- 공지사항 등록 모달 -->
 <div class="overlay hidden" id="nModal" onclick="if(event.target===this)closeModal('nModal')">
   <div class="modal">
-    <h2 class="modalTitle">공지 등록</h2>
+    <h2 class="modalTitle" id="nModalTitle">공지 등록</h2>
     <input class="inp" id="nTitle" placeholder="제목">
     <textarea class="ta" id="nContent" rows="6" placeholder="공지 내용"></textarea>
     <div class="btnRow">
       <button class="btnMain" id="nSubmit" onclick="submitNotice()">등록</button>
-      <button class="btnGhost" onclick="closeModal('nModal')">취소</button>
+      <button class="btnGhost" onclick="resetNForm();closeModal('nModal')">취소</button>
     </div>
   </div>
 </div>
@@ -776,6 +790,11 @@
   }
 
   // ── 공지사항
+  var expandedNoticeId = null;
+  var editingNoticeId = null;
+
+  function toggleNotice(id){ expandedNoticeId = (expandedNoticeId === id) ? null : id; renderNotices(); }
+
   function renderNotices(){
     $("noticeAddBtn").classList.toggle("hidden", !isAdmin());
     var el = $("noticeList");
@@ -784,29 +803,69 @@
       return;
     }
     el.innerHTML = notices.map(function(n){
-      return '<article class="card"><div class="cardBody" style="border-top:none">' +
-        '<div class="cardMeta"><span class="metaText">' + fmt(n.created_at) + '</span></div>' +
-        '<div class="cardTitle" style="margin-bottom:6px">' + esc(n.title) + '</div>' +
-        '<p class="qText">' + esc(n.content) + '</p>' +
-        (isAdmin() ? '<div style="margin-top:10px"><button class="btnDelSm" onclick="deleteNotice(\''+esc(n.id)+'\')">삭제</button></div>' : '') +
-      '</div></article>';
+      var open = expandedNoticeId === n.id;
+      var html = '<article class="card">' +
+        '<button class="cardHead" onclick="toggleNotice(\''+esc(n.id)+'\')">' +
+          '<div style="flex:1;min-width:0">' +
+            '<div class="cardMeta"><span class="metaText">' + fmt(n.created_at) + '</span></div>' +
+            '<div class="cardTitle">' + esc(n.title) + '</div>' +
+          '</div>' +
+        '</button>';
+      if (open) {
+        html += '<div class="cardBody">' +
+          '<p class="qText">' + esc(n.content) + '</p>';
+        if (isAdmin()) {
+          html += '<div class="btnRow" style="margin-top:12px">' +
+            '<button class="btnGhost" onclick="openEditNotice(\''+esc(n.id)+'\')">수정</button>' +
+            '<button class="btnDel" onclick="deleteNotice(\''+esc(n.id)+'\')">삭제</button>' +
+          '</div>';
+        }
+        html += '</div>';
+      }
+      html += '</article>';
+      return html;
     }).join("");
+  }
+
+  function resetNForm(){
+    editingNoticeId = null;
+    $("nModalTitle").textContent = "공지 등록";
+    $("nSubmit").textContent = "등록";
+    $("nTitle").value = ""; $("nContent").value = "";
+  }
+
+  function openEditNotice(id){
+    var n = notices.find(function(x){ return x.id === id; });
+    if (!n) return;
+    editingNoticeId = id;
+    $("nModalTitle").textContent = "공지 수정";
+    $("nSubmit").textContent = "수정 저장";
+    $("nTitle").value = n.title || "";
+    $("nContent").value = n.content || "";
+    openModal("nModal");
   }
 
   async function submitNotice(){
     var title = $("nTitle").value.trim(), content = $("nContent").value.trim();
     if (!title || !content) { toast("제목과 내용을 입력해주세요."); return; }
-    $("nSubmit").disabled = true; $("nSubmit").textContent = "등록 중…";
+    var isEdit = !!editingNoticeId;
+    $("nSubmit").disabled = true; $("nSubmit").textContent = isEdit ? "저장 중…" : "등록 중…";
     try {
-      var res = await db.from("notices").insert({ title: title, content: content });
+      var res;
+      if (isEdit) {
+        res = await db.from("notices").update({ title: title, content: content }).eq("id", editingNoticeId);
+      } else {
+        res = await db.from("notices").insert({ title: title, content: content });
+      }
       if (res.error) throw res.error;
-      $("nTitle").value = ""; $("nContent").value = "";
-      closeModal("nModal"); toast("공지가 등록되었습니다.");
+      resetNForm();
+      closeModal("nModal"); toast(isEdit ? "공지가 수정되었습니다." : "공지가 등록되었습니다.");
       await loadData();
     } catch(e) {
-      toast("등록에 실패했습니다.");
+      toast(isEdit ? "수정에 실패했습니다." : "등록에 실패했습니다.");
     } finally {
-      $("nSubmit").disabled = false; $("nSubmit").textContent = "등록";
+      $("nSubmit").disabled = false;
+      $("nSubmit").textContent = editingNoticeId ? "수정 저장" : "등록";
     }
   }
 
