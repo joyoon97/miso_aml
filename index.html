@@ -145,6 +145,30 @@
   }
   .btnRow { display: flex; gap: 8px; }
   .resDesc { margin: 6px 0 0; font-size: 13.5px; color: var(--muted); line-height: 1.6; }
+
+  /* ── 순위 목록 */
+  .rankRow {
+    display: flex; align-items: center; gap: 12px;
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .rankNo {
+    flex-shrink: 0; width: 44px; height: 26px; border-radius: 13px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; letter-spacing: .02em;
+    color: #fff; background: var(--muted);
+  }
+  .rankNo.top1 { background: var(--yellow); }
+  .rankNo.top2 { background: var(--cyan); }
+  .rankNo.top3 { background: var(--navy); }
+  .rankNo.top4 { background: #6B8CB8; }
+  .rankNo.top5 { background: #9AAAC0; }
+  .rankBody { flex: 1; min-width: 0; }
+  .rankTitle { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rankSub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .rankBarTrack { height: 6px; border-radius: 999px; background: var(--paper); margin-top: 6px; overflow: hidden; }
+  .rankBarFill { height: 100%; background: var(--cyan); border-radius: 999px; }
+  .rankCount { flex-shrink: 0; font-size: 15px; font-weight: 800; color: var(--navy); white-space: nowrap; }
   .resBtnCol { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
   .resLink {
     background: var(--navy); color: #fff; border-radius: 8px; padding: 8px 14px;
@@ -263,6 +287,7 @@
     <div class="tabBar">
       <div class="tabInner">
         <button class="tabBtn on" id="tabQna" onclick="switchTab('qna')">질문 게시판</button>
+        <button class="tabBtn" id="tabNotice" onclick="switchTab('notice')">공지사항</button>
         <button class="tabBtn" id="tabRes" onclick="switchTab('res')">자료실</button>
       </div>
     </div>
@@ -272,6 +297,10 @@
   <!-- 질문 게시판 -->
   <div id="qnaSection">
     <div class="controls">
+      <div id="popularBox" class="hidden" style="margin-bottom:14px">
+        <div class="cardTitle" style="font-size:13.5px;color:var(--navy);margin-bottom:8px">🔥 자주 묻는 질문</div>
+        <div id="popularList" style="display:grid;gap:6px"></div>
+      </div>
       <div class="chipRow" id="qnaChips"></div>
       <div class="ctrlRow">
         <input class="search" id="qnaSearch" placeholder="제목·내용 검색" oninput="renderQna()">
@@ -279,9 +308,21 @@
           <option>전체</option><option>답변대기</option><option>답변완료</option>
         </select>
         <button class="btnYellow" id="askBtn" onclick="openQModal()">+ 질문하기</button>
+        <button class="btnGhost hidden" id="bulkModeBtn" onclick="toggleBulkMode()">선택삭제</button>
+        <button class="btnDel hidden" id="bulkDeleteBtn" onclick="bulkDeleteQuestions()">삭제 (0)</button>
       </div>
     </div>
     <div class="list" id="qnaList"><div class="empty">불러오는 중…</div></div>
+  </div>
+
+  <!-- 공지사항 -->
+  <div id="noticeSection" class="hidden">
+    <div class="controls">
+      <div class="ctrlRow">
+        <button class="btnYellow hidden" id="noticeAddBtn" onclick="openModal('nModal')">+ 공지 등록</button>
+      </div>
+    </div>
+    <div class="list" id="noticeList"></div>
   </div>
 
   <!-- 자료실 -->
@@ -340,6 +381,19 @@
 
 <div id="ptr"><div id="ptrInner"><span id="ptrIcon"></span><span id="ptrText">당겨서 새로고침</span></div></div>
 
+<!-- 공지사항 등록 모달 -->
+<div class="overlay hidden" id="nModal" onclick="if(event.target===this)closeModal('nModal')">
+  <div class="modal">
+    <h2 class="modalTitle">공지 등록</h2>
+    <input class="inp" id="nTitle" placeholder="제목">
+    <textarea class="ta" id="nContent" rows="6" placeholder="공지 내용"></textarea>
+    <div class="btnRow">
+      <button class="btnMain" id="nSubmit" onclick="submitNotice()">등록</button>
+      <button class="btnGhost" onclick="closeModal('nModal')">취소</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- 앱 설치 안내 배너 -->
@@ -382,7 +436,7 @@
   var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   var user = null;
-  var questions = [], resources = [];
+  var questions = [], resources = [], notices = [];
   var qnaFilter = "전체", resFilter = "전체";
   var expandedId = null;
   var answerDrafts = {};
@@ -427,9 +481,11 @@
     $("qBranch").textContent = user.branch;
     $("rBranch").textContent = user.branch;
     $("askBtn").classList.toggle("hidden", isAdmin());
+    $("bulkModeBtn").classList.toggle("hidden", !isAdmin());
     initChips(); initSelects(); loadData();
     setupPush();
     clearBadge();
+    startRealtime();
   }
 
   function doLogin(){
@@ -484,9 +540,12 @@
 
   function switchTab(t){
     $("tabQna").classList.toggle("on", t==="qna");
+    $("tabNotice").classList.toggle("on", t==="notice");
     $("tabRes").classList.toggle("on", t==="res");
     $("qnaSection").classList.toggle("hidden", t!=="qna");
+    $("noticeSection").classList.toggle("hidden", t!=="notice");
     $("resSection").classList.toggle("hidden", t!=="res");
+    if (t === "notice") renderNotices();
   }
 
   // ── 데이터 로드
@@ -494,10 +553,13 @@
     try {
       var q = await db.from("questions").select("*").order("created_at", { ascending: false });
       var r = await db.from("resources").select("*").order("created_at", { ascending: false });
+      var n = await db.from("notices").select("*").order("created_at", { ascending: false });
       if (q.error || r.error) throw (q.error || r.error);
       questions = q.data || [];
       resources = r.data || [];
-      renderQna(); renderRes(); renderPending();
+      notices = (n && n.data) || [];
+      renderQna(); renderRes(); renderPending(); renderPopular();
+      if (!$("noticeSection").classList.contains("hidden")) renderNotices();
     } catch (e) {
       toast("데이터를 불러오지 못했습니다. 연결 정보를 확인해주세요.");
       $("qnaList").innerHTML = '<div class="empty">데이터를 불러오지 못했습니다.</div>';
@@ -536,8 +598,13 @@
     el.innerHTML = list.map(function(q){
       var open = expandedId === q.id;
       var lockMark = (q.category === "STR 보고") ? "🔒 " : "";
-      var html = '<article class="card">' +
+      var checkbox = (isAdmin() && bulkMode)
+        ? '<input type="checkbox" onclick="event.stopPropagation();toggleBulkSelect(\''+esc(q.id)+'\',this.checked)" ' +
+          (bulkSelected[q.id] ? 'checked' : '') + ' style="width:20px;height:20px;flex-shrink:0;margin-right:2px">'
+        : '';
+      var html = '<article class="card" id="qna_'+esc(q.id)+'">' +
         '<button class="cardHead" onclick="toggleQ(\''+esc(q.id)+'\')">' +
+          checkbox +
           '<div style="flex:1;min-width:0">' +
             '<div class="cardMeta"><span class="catTag">'+lockMark+esc(q.category)+'</span>' +
             '<span class="metaText">'+esc(q.branch)+' · '+esc(q.author)+' · '+fmt(q.created_at)+'</span></div>' +
@@ -572,7 +639,21 @@
       return html + '</article>';
     }).join("");
   }
-  function toggleQ(id){ expandedId = (expandedId === id) ? null : id; renderQna(); }
+  function toggleQ(id){
+    var opening = expandedId !== id;
+    expandedId = opening ? id : null;
+    renderQna();
+    if (opening) bumpView(id);
+  }
+
+  async function bumpView(id){
+    var q = questions.find(function(x){ return x.id === id; });
+    if (!q) return;
+    q.view_count = (q.view_count || 0) + 1; // 화면에 즉시 반영
+    try {
+      await db.from("questions").update({ view_count: q.view_count }).eq("id", id);
+    } catch(e){}
+  }
 
   var unlockedIds = {};
   function answerLocked(q){
@@ -591,6 +672,107 @@
     if (pw === null) return;
     if (ACCOUNTS[user.id] && ACCOUNTS[user.id].pw === pw) { unlockedIds[id] = true; renderQna(); }
     else toast("비밀번호가 일치하지 않습니다.");
+  }
+
+  // ── 자주 묻는 질문 (질문 게시판 상단에 인라인 표시)
+  function renderPopular(){
+    var box = $("popularBox"), list = $("popularList");
+    var topQ = questions.filter(function(q){ return (q.view_count||0) > 0; })
+      .sort(function(a,b){ return (b.view_count||0) - (a.view_count||0); }).slice(0, 5);
+    if (topQ.length === 0) { box.classList.add("hidden"); return; }
+    box.classList.remove("hidden");
+    list.innerHTML = topQ.map(function(q, i){
+      var rankCls = "top" + (i+1);
+      return '<div class="rankRow" style="cursor:pointer;padding:9px 12px" onclick="goToQuestion(\''+esc(q.id)+'\')">' +
+        '<div class="rankNo ' + rankCls + '" style="width:36px;height:22px;font-size:10.5px">TOP' + (i+1) + '</div>' +
+        '<div class="rankBody">' +
+          '<div class="rankTitle" style="font-size:13px">' + esc(q.title) + '</div>' +
+        '</div>' +
+        '<div class="rankCount" style="font-size:13px">' + (q.view_count||0) + '회</div>' +
+      '</div>';
+    }).join("");
+  }
+
+  function goToQuestion(id){
+    qnaFilter = "전체"; initChips();
+    $("qnaSearch").value = ""; $("qnaStatus").value = "전체";
+    expandedId = null;
+    renderQna();
+    toggleQ(id);
+    document.getElementById("qna_"+id) && document.getElementById("qna_"+id).scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  // ── 공지사항
+  function renderNotices(){
+    $("noticeAddBtn").classList.toggle("hidden", !isAdmin());
+    var el = $("noticeList");
+    if (notices.length === 0) {
+      el.innerHTML = '<div class="empty">등록된 공지사항이 없습니다.</div>';
+      return;
+    }
+    el.innerHTML = notices.map(function(n){
+      return '<article class="card"><div class="cardBody" style="border-top:none">' +
+        '<div class="cardMeta"><span class="metaText">' + fmt(n.created_at) + '</span></div>' +
+        '<div class="cardTitle" style="margin-bottom:6px">' + esc(n.title) + '</div>' +
+        '<p class="qText">' + esc(n.content) + '</p>' +
+        (isAdmin() ? '<div style="margin-top:10px"><button class="btnDelSm" onclick="deleteNotice(\''+esc(n.id)+'\')">삭제</button></div>' : '') +
+      '</div></article>';
+    }).join("");
+  }
+
+  async function submitNotice(){
+    var title = $("nTitle").value.trim(), content = $("nContent").value.trim();
+    if (!title || !content) { toast("제목과 내용을 입력해주세요."); return; }
+    $("nSubmit").disabled = true; $("nSubmit").textContent = "등록 중…";
+    try {
+      var res = await db.from("notices").insert({ title: title, content: content });
+      if (res.error) throw res.error;
+      $("nTitle").value = ""; $("nContent").value = "";
+      closeModal("nModal"); toast("공지가 등록되었습니다.");
+      await loadData();
+    } catch(e) {
+      toast("등록에 실패했습니다.");
+    } finally {
+      $("nSubmit").disabled = false; $("nSubmit").textContent = "등록";
+    }
+  }
+
+  async function deleteNotice(id){
+    if (!confirm("이 공지를 삭제할까요?")) return;
+    try {
+      var res = await db.from("notices").delete().eq("id", id);
+      if (res.error) throw res.error;
+      toast("삭제되었습니다.");
+      await loadData();
+    } catch(e) { toast("삭제에 실패했습니다."); }
+  }
+
+  // ── 관리자 일괄삭제
+  var bulkMode = false;
+  var bulkSelected = {};
+  function toggleBulkMode(){
+    bulkMode = !bulkMode;
+    bulkSelected = {};
+    $("bulkDeleteBtn").classList.toggle("hidden", !bulkMode);
+    $("bulkDeleteBtn").textContent = "삭제 (0)";
+    $("bulkModeBtn").textContent = bulkMode ? "선택 취소" : "선택삭제";
+    renderQna();
+  }
+  function toggleBulkSelect(id, checked){
+    if (checked) bulkSelected[id] = true; else delete bulkSelected[id];
+    $("bulkDeleteBtn").textContent = "삭제 (" + Object.keys(bulkSelected).length + ")";
+  }
+  async function bulkDeleteQuestions(){
+    var ids = Object.keys(bulkSelected);
+    if (ids.length === 0) { toast("삭제할 질문을 선택해주세요."); return; }
+    if (!confirm(ids.length + "건의 질문을 삭제할까요? 되돌릴 수 없습니다.")) return;
+    try {
+      var res = await db.from("questions").delete().in("id", ids);
+      if (res.error) throw res.error;
+      toast(ids.length + "건 삭제되었습니다.");
+      toggleBulkMode();
+      await loadData();
+    } catch(e) { toast("삭제에 실패했습니다."); }
   }
 
   // ── 자료실 렌더링
@@ -778,6 +960,27 @@
       var sub = await reg.pushManager.getSubscription();
       if (sub) await db.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
     } catch(e){}
+  }
+
+  // ═══ 실시간 자동 갱신 ═══
+  var realtimeChannel = null;
+  var realtimeDebounce = null;
+
+  function startRealtime(){
+    if (realtimeChannel) return;
+    try {
+      realtimeChannel = db.channel("qna-live")
+        .on("postgres_changes", { event: "*", schema: "public", table: "questions" }, scheduleReload)
+        .on("postgres_changes", { event: "*", schema: "public", table: "resources" }, scheduleReload)
+        .on("postgres_changes", { event: "*", schema: "public", table: "notices" }, scheduleReload)
+        .subscribe();
+    } catch(e){}
+  }
+  function scheduleReload(){
+    clearTimeout(realtimeDebounce);
+    realtimeDebounce = setTimeout(async function(){
+      await loadData();
+    }, 600);
   }
 
   // ═══ 당겨서 새로고침 ═══
