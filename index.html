@@ -370,7 +370,7 @@
 <!-- 자료 등록 모달 -->
 <div class="overlay hidden" id="rModal" onclick="if(event.target===this)closeModal('rModal')">
   <div class="modal">
-    <h2 class="modalTitle">자료 등록</h2>
+    <h2 class="modalTitle" id="rModalTitle">자료 등록</h2>
     <div class="formRow" style="justify-content:flex-end">
       <span class="branchFixed" id="rBranch"></span>
     </div>
@@ -382,10 +382,11 @@
       ※ 아이폰은 한글(HWP) 파일이 기본적으로 열리지 않습니다. 가능하면 PDF로 변환해서 올려주세요. HWP로 올릴 경우 아이폰에서는 무료 앱 "한컴오피스 Viewer" 설치 후 파일을 길게 눌러 공유 → 해당 앱으로 열면 됩니다.
     </p>
     <input class="inp" id="rFile" type="file" accept=".hwp,.hwpx,.pdf,.ppt,.pptx,.doc,.docx,.jpg,.jpeg,.png" style="padding:9px">
-    <input class="inp" id="rLink" placeholder="또는 자료 링크 입력 (구글드라이브 등 공유 URL)">
+    <p style="margin:6px 0 4px;font-size:12px;color:var(--muted)" id="rFileHint"></p>
+    <input class="inp" id="rLink" placeholder="자료 링크 (법령 원문, 구글드라이브 등 공유 URL) — 파일 첨부 없이 링크만 등록해도 됩니다">
     <div class="btnRow">
       <button class="btnMain" id="rSubmit" onclick="submitResource()">등록</button>
-      <button class="btnGhost" onclick="closeModal('rModal')">취소</button>
+      <button class="btnGhost" onclick="resetRForm();closeModal('rModal')">취소</button>
     </div>
   </div>
 </div>
@@ -475,9 +476,35 @@
     else $("qCat").selectedIndex = 0;
     openModal("qModal");
   }
+  var editingResourceId = null;
+
+  function resetRForm(){
+    editingResourceId = null;
+    $("rModalTitle").textContent = "자료 등록";
+    $("rSubmit").textContent = "등록";
+    $("rTitle").value = ""; $("rDesc").value = ""; $("rLink").value = ""; $("rFile").value = "";
+    $("rFileHint").textContent = "";
+  }
+
   function openRModal(){
+    resetRForm();
     if (resFilter !== "전체" && RES_CATEGORIES.indexOf(resFilter) >= 0) $("rCat").value = resFilter;
     else $("rCat").selectedIndex = 0;
+    openModal("rModal");
+  }
+
+  function openEditResource(id){
+    var r = resources.find(function(x){ return x.id === id; });
+    if (!r) return;
+    editingResourceId = id;
+    $("rModalTitle").textContent = "자료 수정";
+    $("rSubmit").textContent = "수정 저장";
+    $("rCat").value = r.category;
+    $("rTitle").value = r.title || "";
+    $("rDesc").value = r.descr || "";
+    $("rLink").value = r.link || "";
+    $("rFile").value = "";
+    $("rFileHint").textContent = "새 파일을 선택하면 기존 파일 대신 교체됩니다. 비워두면 기존 링크가 그대로 유지됩니다.";
     openModal("rModal");
   }
   function closeModal(id){ $(id).classList.add("hidden"); }
@@ -837,6 +864,7 @@
         '</div>' +
         '<div class="resBtnCol">' +
           (r.link ? '<a class="resLink" href="'+esc(r.link)+'" target="_blank" rel="noreferrer">자료 열기</a>' : '') +
+          (canDel ? '<button class="btnGhost" style="padding:5px 10px;font-size:12px" onclick="openEditResource(\''+esc(r.id)+'\')">수정</button>' : '') +
           (canDel ? '<button class="btnDelSm" onclick="deleteResource(\''+esc(r.id)+'\')">삭제</button>' : '') +
         '</div></div></article>';
     }).join("");
@@ -897,10 +925,12 @@
     if (!title) { toast("자료 제목을 입력해주세요."); return; }
     var file = $("rFile").files[0] || null;
     var link = $("rLink").value.trim();
+    var isEdit = !!editingResourceId;
     if (file && file.size > 50 * 1024 * 1024) { toast("파일은 50MB 이하만 업로드할 수 있습니다."); return; }
-    $("rSubmit").disabled = true; $("rSubmit").textContent = "등록 중…";
+    $("rSubmit").disabled = true; $("rSubmit").textContent = isEdit ? "저장 중…" : "등록 중…";
     try {
-      // 파일이 있으면 Supabase Storage에 업로드 후 링크 생성
+      var descr = $("rDesc").value.trim();
+      // 파일이 새로 선택된 경우에만 업로드하여 링크 교체 (수정 시 파일을 안 바꾸면 기존 링크 유지)
       if (file) {
         var ext = (file.name.split(".").pop() || "bin").toLowerCase();
         var path = Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7) + "." + ext;
@@ -908,23 +938,25 @@
         if (up.error) throw up.error;
         var pub = db.storage.from("files").getPublicUrl(path);
         link = pub.data.publicUrl;
-        // 원본 파일명을 설명에 함께 기록
-        var d = $("rDesc").value.trim();
-        $("rDesc").value = d ? (d + " (파일: " + file.name + ")") : ("파일: " + file.name);
+        descr = descr ? (descr + " (파일: " + file.name + ")") : ("파일: " + file.name);
       }
-      var res = await db.from("resources").insert({
-        title: title, category: $("rCat").value,
-        descr: $("rDesc").value.trim(), link: link,
-        branch: user.branch
-      });
+      var payload = { title: title, category: $("rCat").value, descr: descr, link: link };
+      var res;
+      if (isEdit) {
+        res = await db.from("resources").update(payload).eq("id", editingResourceId);
+      } else {
+        payload.branch = user.branch;
+        res = await db.from("resources").insert(payload);
+      }
       if (res.error) throw res.error;
-      $("rTitle").value = ""; $("rDesc").value = ""; $("rLink").value = ""; $("rFile").value = "";
-      closeModal("rModal"); toast("자료가 등록되었습니다.");
+      resetRForm();
+      closeModal("rModal"); toast(isEdit ? "자료가 수정되었습니다." : "자료가 등록되었습니다.");
       await loadData();
     } catch (e) {
-      toast("등록에 실패했습니다. 다시 시도해주세요.");
+      toast(isEdit ? "수정에 실패했습니다. 다시 시도해주세요." : "등록에 실패했습니다. 다시 시도해주세요.");
     } finally {
-      $("rSubmit").disabled = false; $("rSubmit").textContent = "등록";
+      $("rSubmit").disabled = false;
+      $("rSubmit").textContent = editingResourceId ? "수정 저장" : "등록";
     }
   }
 
