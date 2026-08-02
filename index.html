@@ -33,7 +33,7 @@
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; background: var(--paper); color: var(--ink);
+    margin: 0; background: var(--navy); color: var(--ink);
     font-family: '신협나눔체','Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,sans-serif;
   }
   button { font-family: inherit; cursor: pointer; }
@@ -135,6 +135,7 @@
     text-align: center; color: var(--muted); font-size: 14px; padding: 48px 0;
     background: #fff; border: 1px dashed var(--line); border-radius: 10px;
   }
+  .emptyMascot { width: 130px; display: block; margin: 0 auto 14px; }
   .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; transition: box-shadow .15s ease; }
   .card:hover { box-shadow: 0 2px 10px rgba(27,42,74,.08); }
   .cardHead {
@@ -205,7 +206,7 @@
   }
   footer {
     max-width: 860px; margin: 24px auto 0; padding: 0 20px 60px;
-    font-size: 12px; color: var(--muted); line-height: 1.6;
+    font-size: 12px; color: rgba(255,255,255,.55); line-height: 1.6; position: relative; z-index: 1;
   }
 
   /* ── 모달/토스트 */
@@ -276,9 +277,16 @@
     outline: 2px solid var(--navy); outline-offset: 1px;
   }
   @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+
+  #watermark {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #watermark img { width: 360px; max-width: 65vw; opacity: .05; }
 </style>
 </head>
 <body>
+<div id="watermark"><img src="icons/logo.png" alt=""></div>
 
 <!-- ══════ 로그인 화면 ══════ -->
 <div id="loginPage">
@@ -336,7 +344,7 @@
   <div id="qnaSection">
     <div class="controls">
       <div id="popularBox" class="hidden" style="margin-bottom:14px">
-        <div class="cardTitle" style="font-size:13.5px;color:var(--navy);margin-bottom:8px">🔥 자주 묻는 질문</div>
+        <div class="cardTitle" style="font-size:13.5px;color:#fff;margin-bottom:8px">🔥 자주 묻는 질문</div>
         <div id="popularList" style="display:grid;gap:6px"></div>
       </div>
       <div class="chipRow" id="qnaChips"></div>
@@ -718,7 +726,9 @@
     });
     var el = $("qnaList");
     if (list.length === 0) {
-      el.innerHTML = '<div class="empty">' + (questions.length===0 ? "아직 등록된 질문이 없습니다. 첫 질문을 올려보세요." : "조건에 맞는 질문이 없습니다.") + "</div>";
+      el.innerHTML = questions.length===0
+        ? '<div class="empty"><img class="emptyMascot" src="icons/pig-blue.png" alt="">아직 등록된 질문이 없습니다. 첫 질문을 올려보세요.</div>'
+        : '<div class="empty">조건에 맞는 질문이 없습니다.</div>';
       return;
     }
     el.innerHTML = list.map(function(q){
@@ -911,7 +921,7 @@
     $("noticeAddBtn").classList.toggle("hidden", !isAdmin());
     var el = $("noticeList");
     if (notices.length === 0) {
-      el.innerHTML = '<div class="empty">등록된 공지사항이 없습니다.</div>';
+      el.innerHTML = '<div class="empty"><img class="emptyMascot" src="icons/pig-orange.png" alt="">등록된 공지사항이 없습니다.</div>';
       return;
     }
     el.innerHTML = notices.map(function(n){
@@ -1046,7 +1056,9 @@
     });
     var el = $("resList");
     if (list.length === 0) {
-      el.innerHTML = '<div class="empty">' + (resources.length===0 ? "아직 등록된 자료가 없습니다." : "조건에 맞는 자료가 없습니다.") + "</div>";
+      el.innerHTML = resources.length===0
+        ? '<div class="empty"><img class="emptyMascot" src="icons/pig-yellow.png" alt="">아직 등록된 자료가 없습니다.</div>'
+        : '<div class="empty">조건에 맞는 자료가 없습니다.</div>';
       return;
     }
     el.innerHTML = list.map(function(r){
