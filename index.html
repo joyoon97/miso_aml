@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>미소신협 자금세탁방지 Q&A</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#1B2A4A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AML Q&A">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
@@ -172,6 +179,26 @@
     font-size: 13.5px; z-index: 200; box-shadow: 0 4px 14px rgba(0,0,0,.2); display: none;
   }
   .hidden { display: none !important; }
+
+  /* ── 설치 안내 배너 */
+  #installBanner {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
+    background: #fff; border-top: 3px solid var(--yellow);
+    box-shadow: 0 -4px 16px rgba(27,42,74,.15);
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+    display: none;
+  }
+  #installBanner.show { display: block; }
+  .ibInner {
+    max-width: 860px; margin: 0 auto; display: flex;
+    align-items: center; gap: 12px;
+  }
+  .ibIcon { width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; }
+  .ibText { flex: 1; min-width: 0; }
+  .ibTitle { font-size: 14.5px; font-weight: 800; color: var(--navy); }
+  .ibDesc { font-size: 12.5px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
+  .ibBtns { display: flex; gap: 6px; flex-shrink: 0; }
+
   button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible {
     outline: 2px solid var(--navy); outline-offset: 1px;
   }
@@ -190,7 +217,7 @@
     <input class="inp" id="loginPw" type="password" placeholder="비밀번호" autocomplete="current-password">
     <div class="errText hidden" id="loginErr">아이디 또는 비밀번호가 일치하지 않습니다.</div>
     <button class="btnMain" style="width:100%;padding:12px" onclick="doLogin()">로그인</button>
-    <p class="loginFoot">계정 문의: 기획실</p>
+    <p class="loginFoot">계정 문의: 담당 부서</p>
   </div>
 </div>
 
@@ -201,7 +228,7 @@
       <div>
         <div class="eyebrow">미소신용협동조합 · 평생어부바 🐷</div>
         <h1>자금세탁방지 Q&A</h1>
-        <p class="subText">AML 업무 중 궁금한 점을 올려주세요. 기획실에서 확인 후 답변드립니다.</p>
+        <p class="subText">AML 업무 중 궁금한 점을 올려주세요. 담당 부서에서 확인 후 답변드립니다.</p>
       </div>
       <div class="userBox">
         <span class="userTag" id="userTag"></span>
@@ -257,6 +284,12 @@
       <span class="branchFixed" id="qBranch"></span>
     </div>
     <input class="inp" id="qTitle" placeholder="제목">
+    <div class="hidden" id="qSecretRow">
+      <input class="inp" id="qSecret" type="password" placeholder="글 비밀번호 (STR 보고 질문은 비밀글로 등록됩니다)">
+      <p style="margin:-4px 0 10px;font-size:12px;color:var(--red);line-height:1.5">
+        STR 관련 내용은 누설 금지 대상입니다. 작성 지점과 담당 부서만 열람 가능하며, 다른 지점은 글 비밀번호를 알아야 열람할 수 있습니다.
+      </p>
+    </div>
     <textarea class="ta" id="qContent" rows="6" placeholder="질문 내용 (고객 개인정보는 입력하지 마세요)"></textarea>
     <input class="inp" id="qAuthor" placeholder="작성자 (미입력 시 익명)">
     <div class="btnRow">
@@ -286,6 +319,21 @@
 
 <div id="toast"></div>
 
+<!-- 앱 설치 안내 배너 -->
+<div id="installBanner">
+  <div class="ibInner">
+    <img class="ibIcon" src="icons/icon-192.png" alt="">
+    <div class="ibText">
+      <div class="ibTitle">앱을 설치하시겠습니까?</div>
+      <div class="ibDesc" id="ibDesc">홈 화면에 추가하면 앱처럼 빠르게 접속할 수 있습니다.</div>
+    </div>
+    <div class="ibBtns">
+      <button class="btnYellow" id="ibInstall" onclick="doInstall()">설치</button>
+      <button class="btnGhost" onclick="dismissInstall()">나중에</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ═══════════════════════════════════════════════
   // Supabase 연결 정보 — 본인 프로젝트 값으로 교체하세요
@@ -305,7 +353,7 @@
     miso:   { pw: "miso",   branch: "기획실",   role: "admin"  }
   };
 
-  var CATEGORIES = ["고객확인(CDD/EDD)","STR/CTR 보고","영장·임의보고","교육·자격","제도·규정","기타"];
+  var CATEGORIES = ["고객확인(CDD/EDD)","CTR 보고","STR 보고","교육·자격","제도·규정","기타"];
   var RES_CATEGORIES = ["교육자료","유권해석사례집","업무매뉴얼","서식","기타"];
 
   var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -338,29 +386,44 @@
   function isAdmin(){ return user && user.role === "admin"; }
 
   // ── 로그인
+  function enterMain(){
+    $("loginErr").classList.add("hidden");
+    $("loginPage").classList.add("hidden");
+    $("mainPage").classList.remove("hidden");
+    $("userTag").textContent = user.branch + (isAdmin() ? " (관리자)" : "");
+    $("qBranch").textContent = user.branch;
+    $("rBranch").textContent = user.branch;
+    $("askBtn").classList.toggle("hidden", isAdmin());
+    initChips(); initSelects(); loadData();
+  }
+
   function doLogin(){
     var id = $("loginId").value.trim().toLowerCase();
     var pw = $("loginPw").value;
     var acc = ACCOUNTS[id];
     if (acc && acc.pw === pw) {
       user = { branch: acc.branch, role: acc.role };
-      $("loginErr").classList.add("hidden");
-      $("loginPage").classList.add("hidden");
-      $("mainPage").classList.remove("hidden");
-      $("userTag").textContent = user.branch + (isAdmin() ? " (관리자)" : "");
-      $("qBranch").textContent = user.branch;
-      $("rBranch").textContent = user.branch;
-      $("askBtn").classList.toggle("hidden", isAdmin());
-      initChips(); initSelects(); loadData();
+      try { localStorage.setItem("misoAmlUser", JSON.stringify(user)); } catch(e){}
+      enterMain();
     } else {
       $("loginErr").classList.remove("hidden");
     }
   }
+
+  // 새로고침 시 로그인 유지
+  try {
+    var saved = localStorage.getItem("misoAmlUser");
+    if (saved) {
+      var u = JSON.parse(saved);
+      if (u && u.branch && u.role) { user = u; enterMain(); }
+    }
+  } catch(e){}
   $("loginId").addEventListener("keydown", function(e){ if(e.key==="Enter") doLogin(); });
   $("loginPw").addEventListener("keydown", function(e){ if(e.key==="Enter") doLogin(); });
 
   function logout(){
     user = null; expandedId = null;
+    try { localStorage.removeItem("misoAmlUser"); } catch(e){}
     $("mainPage").classList.add("hidden");
     $("loginPage").classList.remove("hidden");
     $("loginId").value = ""; $("loginPw").value = "";
@@ -379,6 +442,9 @@
   function initSelects(){
     $("qCat").innerHTML = CATEGORIES.map(function(c){ return "<option>"+esc(c)+"</option>"; }).join("");
     $("rCat").innerHTML = RES_CATEGORIES.map(function(c){ return "<option>"+esc(c)+"</option>"; }).join("");
+    $("qCat").onchange = function(){
+      $("qSecretRow").classList.toggle("hidden", this.value !== "STR 보고");
+    };
   }
   function setQnaFilter(c){ qnaFilter = c; initChips(); renderQna(); }
   function setResFilter(c){ resFilter = c; initChips(); renderRes(); }
@@ -423,7 +489,10 @@
       if (qnaFilter !== "전체" && q.category !== qnaFilter) return false;
       if (stat === "답변대기" && q.answer) return false;
       if (stat === "답변완료" && !q.answer) return false;
-      if (s && ((q.title||"") + (q.content||"") + (q.answer||"")).toLowerCase().indexOf(s) < 0) return false;
+      if (s) {
+        var hay = isLocked(q) ? (q.title||"") : ((q.title||"") + (q.content||"") + (q.answer||""));
+        if (hay.toLowerCase().indexOf(s) < 0) return false;
+      }
       return true;
     });
     var el = $("qnaList");
@@ -433,10 +502,11 @@
     }
     el.innerHTML = list.map(function(q){
       var open = expandedId === q.id;
+      var lockMark = (q.category === "STR 보고" && q.secret_pw) ? "🔒 " : "";
       var html = '<article class="card">' +
         '<button class="cardHead" onclick="toggleQ(\''+esc(q.id)+'\')">' +
           '<div style="flex:1;min-width:0">' +
-            '<div class="cardMeta"><span class="catTag">'+esc(q.category)+'</span>' +
+            '<div class="cardMeta"><span class="catTag">'+lockMark+esc(q.category)+'</span>' +
             '<span class="metaText">'+esc(q.branch)+' · '+esc(q.author)+' · '+fmt(q.created_at)+'</span></div>' +
             '<div class="cardTitle">'+esc(q.title)+'</div>' +
           '</div>' +
@@ -445,7 +515,7 @@
       if (open) {
         html += '<div class="cardBody"><p class="qText">'+esc(q.content)+'</p>';
         if (q.answer) {
-          html += '<div class="answerBox"><div class="answerHead">기획실 답변 <span class="metaText">'+fmt(q.answered_at)+'</span></div>' +
+          html += '<div class="answerBox"><div class="answerHead">담당 부서 답변 <span class="metaText">'+fmt(q.answered_at)+'</span></div>' +
                   '<p class="qText">'+esc(q.answer)+'</p></div>';
         }
         if (isAdmin()) {
@@ -462,7 +532,29 @@
       return html + '</article>';
     }).join("");
   }
-  function toggleQ(id){ expandedId = (expandedId === id) ? null : id; renderQna(); }
+  function toggleQ(id){
+    if (expandedId === id) { expandedId = null; renderQna(); return; }
+    var q = questions.find(function(x){ return x.id === id; });
+    if (q && isLocked(q)) {
+      var pw = prompt("STR 보고 관련 비밀글입니다.\n글 비밀번호를 입력해주세요.\n\n※ 비밀번호를 모르는 경우, STR 내용은 누설 금지 대상이므로 담당 부서로 직접 문의해주세요.");
+      if (pw === null) return;
+      if (pw === q.secret_pw) {
+        unlockedIds[id] = true;
+      } else {
+        toast("비밀번호가 일치하지 않습니다. 내용 확인은 담당 부서로 직접 문의해주세요.");
+        return;
+      }
+    }
+    expandedId = id; renderQna();
+  }
+
+  var unlockedIds = {};
+  function isLocked(q){
+    if (q.category !== "STR 보고" || !q.secret_pw) return false;
+    if (isAdmin()) return false;
+    if (q.branch === user.branch) return false;
+    return !unlockedIds[q.id];
+  }
 
   // ── 자료실 렌더링
   function renderRes(){
@@ -494,15 +586,20 @@
   async function submitQuestion(){
     var title = $("qTitle").value.trim(), content = $("qContent").value.trim();
     if (!title || !content) { toast("제목과 내용을 입력해주세요."); return; }
+    var isStr = $("qCat").value === "STR 보고";
+    var secret = $("qSecret").value.trim();
+    if (isStr && !secret) { toast("STR 보고 질문은 글 비밀번호를 설정해주세요."); return; }
     $("qSubmit").disabled = true; $("qSubmit").textContent = "등록 중…";
     try {
       var res = await db.from("questions").insert({
         title: title, content: content,
         category: $("qCat").value, branch: user.branch,
-        author: $("qAuthor").value.trim() || "익명"
+        author: $("qAuthor").value.trim() || "익명",
+        secret_pw: isStr ? secret : null
       });
       if (res.error) throw res.error;
-      $("qTitle").value = ""; $("qContent").value = ""; $("qAuthor").value = "";
+      $("qTitle").value = ""; $("qContent").value = ""; $("qAuthor").value = ""; $("qSecret").value = "";
+      $("qSecretRow").classList.add("hidden"); $("qCat").selectedIndex = 0;
       closeModal("qModal"); toast("질문이 등록되었습니다.");
       await loadData();
     } catch (e) {
@@ -573,6 +670,56 @@
       toast("삭제에 실패했습니다.");
     }
   }
+
+  // ═══ 앱 설치 안내 (PWA) ═══
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  }
+
+  var deferredPrompt = null;
+  var IB_DISMISS_KEY = "misoAmlInstallDismissed";
+
+  function isStandalone(){
+    return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  }
+  function isIos(){
+    return /iphone|ipad|ipod/i.test(navigator.userAgent);
+  }
+  function installDismissed(){
+    try { return localStorage.getItem(IB_DISMISS_KEY) === "1"; } catch(e){ return false; }
+  }
+
+  // 안드로이드/크롬: 브라우저가 설치 가능 신호를 주면 배너 표시
+  window.addEventListener("beforeinstallprompt", function(e){
+    e.preventDefault();
+    deferredPrompt = e;
+    if (!isStandalone() && !installDismissed()) {
+      $("installBanner").classList.add("show");
+    }
+  });
+
+  // 아이폰: 설치 프롬프트가 없으므로 방법 안내 배너 표시
+  if (isIos() && !isStandalone() && !installDismissed()) {
+    $("ibDesc").innerHTML = "Safari 하단의 공유 버튼(⬆️)을 누른 뒤 <b>'홈 화면에 추가'</b>를 선택하세요.";
+    $("ibInstall").classList.add("hidden");
+    $("installBanner").classList.add("show");
+  }
+
+  async function doInstall(){
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    var choice = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    $("installBanner").classList.remove("show");
+    if (choice && choice.outcome === "accepted") toast("앱이 설치되었습니다.");
+  }
+  function dismissInstall(){
+    $("installBanner").classList.remove("show");
+    try { localStorage.setItem(IB_DISMISS_KEY, "1"); } catch(e){}
+  }
+  window.addEventListener("appinstalled", function(){
+    $("installBanner").classList.remove("show");
+  });
 </script>
 </body>
 </html>

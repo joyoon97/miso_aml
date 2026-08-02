@@ -1,0 +1,23 @@
+{
+  "name": "미소신협 자금세탁방지 Q&A",
+  "short_name": "AML Q&A",
+  "description": "미소신용협동조합 자금세탁방지 질문·답변 게시판",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1B2A4A",
+  "theme_color": "#1B2A4A",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
