@@ -334,6 +334,7 @@
       <div class="tabInner">
         <button class="tabBtn on" id="tabQna" onclick="switchTab('qna')">질문 게시판</button>
         <button class="tabBtn" id="tabNotice" onclick="switchTab('notice')">공지사항</button>
+        <button class="tabBtn" id="tabPopular" onclick="switchTab('popular')">자주 묻는 질문</button>
         <button class="tabBtn" id="tabRes" onclick="switchTab('res')">자료실</button>
       </div>
     </div>
@@ -343,10 +344,6 @@
   <!-- 질문 게시판 -->
   <div id="qnaSection">
     <div class="controls">
-      <div id="popularBox" class="hidden" style="margin-bottom:14px">
-        <div class="cardTitle" style="font-size:13.5px;color:var(--navy);margin-bottom:8px">🔥 자주 묻는 질문</div>
-        <div id="popularList" style="display:grid;gap:6px"></div>
-      </div>
       <div class="chipRow" id="qnaChips"></div>
       <div class="ctrlRow">
         <input class="search" id="qnaSearch" placeholder="제목·내용 검색" oninput="renderQna()">
@@ -369,6 +366,14 @@
       </div>
     </div>
     <div class="list" id="noticeList"></div>
+  </div>
+
+  <!-- 자주 묻는 질문 -->
+  <div id="popularSection" class="hidden">
+    <div class="controls">
+      <p class="metaText" style="margin:0">전체 지점 질문 중 조회수가 많은 순서로 최대 5건이 표시됩니다.</p>
+    </div>
+    <div class="list" id="popularList2"></div>
   </div>
 
   <!-- 자료실 -->
@@ -675,11 +680,14 @@
   function switchTab(t){
     $("tabQna").classList.toggle("on", t==="qna");
     $("tabNotice").classList.toggle("on", t==="notice");
+    $("tabPopular").classList.toggle("on", t==="popular");
     $("tabRes").classList.toggle("on", t==="res");
     $("qnaSection").classList.toggle("hidden", t!=="qna");
     $("noticeSection").classList.toggle("hidden", t!=="notice");
+    $("popularSection").classList.toggle("hidden", t!=="popular");
     $("resSection").classList.toggle("hidden", t!=="res");
     if (t === "notice") renderNotices();
+    if (t === "popular") renderPopular();
   }
 
   // ── 데이터 로드
@@ -812,19 +820,22 @@
 
   // ── 자주 묻는 질문 (질문 게시판 상단에 인라인 표시)
   function renderPopular(){
-    var box = $("popularBox"), list = $("popularList");
+    var list = $("popularList2");
     var topQ = questions.filter(function(q){ return (q.view_count||0) > 0; })
       .sort(function(a,b){ return (b.view_count||0) - (a.view_count||0); }).slice(0, 5);
-    if (topQ.length === 0) { box.classList.add("hidden"); return; }
-    box.classList.remove("hidden");
+    if (topQ.length === 0) {
+      list.innerHTML = '<div class="empty"><img class="emptyMascot" src="icons/pig-blue.png" alt="">아직 조회된 질문이 없습니다. 질문을 열람하면 여기에 순위가 표시됩니다.</div>';
+      return;
+    }
     list.innerHTML = topQ.map(function(q, i){
       var rankCls = "top" + (i+1);
-      return '<div class="rankRow" style="cursor:pointer;padding:9px 12px" onclick="goToQuestion(\''+esc(q.id)+'\')">' +
-        '<div class="rankNo ' + rankCls + '" style="width:36px;height:22px;font-size:10.5px">TOP' + (i+1) + '</div>' +
+      return '<div class="rankRow" style="cursor:pointer" onclick="goToQuestion(\''+esc(q.id)+'\')">' +
+        '<div class="rankNo ' + rankCls + '">TOP' + (i+1) + '</div>' +
         '<div class="rankBody">' +
-          '<div class="rankTitle" style="font-size:13px">' + esc(q.title) + '</div>' +
+          '<div class="rankTitle">' + esc(q.title) + '</div>' +
+          '<div class="rankSub">' + esc(q.category) + ' · ' + esc(q.branch) + '</div>' +
         '</div>' +
-        '<div class="rankCount" style="font-size:13px">' + (q.view_count||0) + '회</div>' +
+        '<div class="rankCount">' + (q.view_count||0) + '회</div>' +
       '</div>';
     }).join("");
   }
