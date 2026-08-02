@@ -14,8 +14,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
-    --navy: #1B2A4A; --yellow: #F5B301; --paper: #F7F6F2;
-    --ink: #22252B; --muted: #7A8090; --line: #E3E1DA; --red: #C0392B;
+    --navy: #0056a7; --yellow: #d8a100; --cyan: #00afd5; --paper: #F5F7F9;
+    --ink: #22252B; --muted: #7A8090; --line: #DDE3E8; --red: #C0392B;
   }
   * { box-sizing: border-box; }
   body {
@@ -34,8 +34,9 @@
     background: #fff; border-radius: 14px; border-top: 5px solid var(--yellow);
     padding: 30px 28px 24px; width: 100%; max-width: 380px;
   }
-  .eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--yellow); font-weight: 700; }
-  .loginCard .eyebrow { color: #b8860b; }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--yellow); font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .ciLogo { height: 15px; width: auto; }
+  .loginCard .eyebrow { color: #a87e00; }
   h1 { margin: 6px 0 8px; font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
   .loginCard h1 { color: var(--navy); margin-bottom: 4px; }
   .subText { margin: 0 0 22px; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
@@ -89,7 +90,7 @@
   }
   .tabBtn.on { color: #fff; border-bottom-color: var(--yellow); font-weight: 800; }
   .pendingBar {
-    background: var(--yellow); color: var(--navy); font-size: 13px;
+    background: var(--cyan); color: #fff; font-size: 13px;
     font-weight: 700; text-align: center; padding: 7px 12px;
   }
 
@@ -123,7 +124,7 @@
   .metaText { font-size: 12px; color: var(--muted); }
   .cardTitle { font-size: 15.5px; font-weight: 700; line-height: 1.4; }
   .stampDone {
-    flex-shrink: 0; border: 2px solid var(--red); color: var(--red); border-radius: 6px;
+    flex-shrink: 0; border: 2px solid var(--cyan); color: var(--cyan); border-radius: 6px;
     padding: 4px 9px; font-size: 12px; font-weight: 800; letter-spacing: .05em;
     transform: rotate(-4deg);
   }
@@ -134,8 +135,8 @@
   .cardBody { border-top: 1px solid var(--line); padding: 14px 16px 16px; }
   .qText { margin: 0; font-size: 14.5px; line-height: 1.7; white-space: pre-wrap; }
   .answerBox {
-    margin-top: 14px; background: #FBF7EC; border: 1px solid #EAD9A8;
-    border-left: 4px solid var(--yellow); border-radius: 8px; padding: 12px 14px;
+    margin-top: 14px; background: #F0F8FC; border: 1px solid #C9E8F4;
+    border-left: 4px solid var(--cyan); border-radius: 8px; padding: 12px 14px;
   }
   .answerHead { font-size: 13px; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
   .ta {
@@ -210,7 +211,7 @@
 <!-- ══════ 로그인 화면 ══════ -->
 <div id="loginPage">
   <div class="loginCard">
-    <div class="eyebrow">미소신용협동조합 · 평생어부바 🐷</div>
+    <div class="eyebrow"><img class="ciLogo" src="icons/logo.png" alt="">미소신용협동조합 · 평생어부바 🐷</div>
     <h1>자금세탁방지 Q&A</h1>
     <p class="subText">지점 계정으로 로그인해주세요.</p>
     <input class="inp" id="loginId" placeholder="아이디" autocomplete="username">
@@ -226,7 +227,7 @@
   <header>
     <div class="headInner">
       <div>
-        <div class="eyebrow">미소신용협동조합 · 평생어부바 🐷</div>
+        <div class="eyebrow"><img class="ciLogo" src="icons/logo.png" alt="">미소신용협동조합 · 평생어부바 🐷</div>
         <h1>자금세탁방지 Q&A</h1>
         <p class="subText">AML 업무 중 궁금한 점을 올려주세요. 담당 부서에서 확인 후 답변드립니다.</p>
       </div>
@@ -253,7 +254,7 @@
         <select class="sel" id="qnaStatus" onchange="renderQna()">
           <option>전체</option><option>답변대기</option><option>답변완료</option>
         </select>
-        <button class="btnYellow" id="askBtn" onclick="openModal('qModal')">+ 질문하기</button>
+        <button class="btnYellow" id="askBtn" onclick="openQModal()">+ 질문하기</button>
       </div>
     </div>
     <div class="list" id="qnaList"><div class="empty">불러오는 중…</div></div>
@@ -264,7 +265,7 @@
     <div class="controls">
       <div class="chipRow" id="resChips"></div>
       <div class="ctrlRow">
-        <button class="btnYellow" onclick="openModal('rModal')">+ 자료 등록</button>
+        <button class="btnYellow" onclick="openRModal()">+ 자료 등록</button>
       </div>
     </div>
     <div class="list" id="resList"></div>
@@ -284,12 +285,6 @@
       <span class="branchFixed" id="qBranch"></span>
     </div>
     <input class="inp" id="qTitle" placeholder="제목">
-    <div class="hidden" id="qSecretRow">
-      <input class="inp" id="qSecret" type="password" placeholder="글 비밀번호 (STR 보고 질문은 비밀글로 등록됩니다)">
-      <p style="margin:-4px 0 10px;font-size:12px;color:var(--red);line-height:1.5">
-        STR 관련 내용은 누설 금지 대상입니다. 작성 지점과 담당 부서만 열람 가능하며, 다른 지점은 글 비밀번호를 알아야 열람할 수 있습니다.
-      </p>
-    </div>
     <textarea class="ta" id="qContent" rows="6" placeholder="질문 내용 (고객 개인정보는 입력하지 마세요)"></textarea>
     <input class="inp" id="qAuthor" placeholder="작성자 (미입력 시 익명)">
     <div class="btnRow">
@@ -309,7 +304,9 @@
     <select class="sel" style="width:100%;margin-bottom:10px" id="rCat"></select>
     <input class="inp" id="rTitle" placeholder="자료 제목 (예: 2026년 AML 핵심요원 교육자료)">
     <textarea class="ta" id="rDesc" rows="3" placeholder="자료 설명 (선택)"></textarea>
-    <input class="inp" id="rLink" placeholder="자료 링크 (구글드라이브 등 공유 링크 URL)">
+    <label style="display:block;font-size:13px;font-weight:700;color:var(--navy);margin-bottom:6px">파일 첨부 (HWP, PDF, PPT, WORD, JPG, PNG)</label>
+    <input class="inp" id="rFile" type="file" accept=".hwp,.hwpx,.pdf,.ppt,.pptx,.doc,.docx,.jpg,.jpeg,.png" style="padding:9px">
+    <input class="inp" id="rLink" placeholder="또는 자료 링크 입력 (구글드라이브 등 공유 URL)">
     <div class="btnRow">
       <button class="btnMain" id="rSubmit" onclick="submitResource()">등록</button>
       <button class="btnGhost" onclick="closeModal('rModal')">취소</button>
@@ -382,6 +379,16 @@
     clearTimeout(t._tm); t._tm = setTimeout(function(){ t.style.display = "none"; }, 2500);
   }
   function openModal(id){ $(id).classList.remove("hidden"); }
+  function openQModal(){
+    if (qnaFilter !== "전체" && CATEGORIES.indexOf(qnaFilter) >= 0) $("qCat").value = qnaFilter;
+    else $("qCat").selectedIndex = 0;
+    openModal("qModal");
+  }
+  function openRModal(){
+    if (resFilter !== "전체" && RES_CATEGORIES.indexOf(resFilter) >= 0) $("rCat").value = resFilter;
+    else $("rCat").selectedIndex = 0;
+    openModal("rModal");
+  }
   function closeModal(id){ $(id).classList.add("hidden"); }
   function isAdmin(){ return user && user.role === "admin"; }
 
@@ -395,6 +402,7 @@
     $("rBranch").textContent = user.branch;
     $("askBtn").classList.toggle("hidden", isAdmin());
     initChips(); initSelects(); loadData();
+    setupPush();
   }
 
   function doLogin(){
@@ -422,6 +430,7 @@
   $("loginPw").addEventListener("keydown", function(e){ if(e.key==="Enter") doLogin(); });
 
   function logout(){
+    removePush();
     user = null; expandedId = null;
     try { localStorage.removeItem("misoAmlUser"); } catch(e){}
     $("mainPage").classList.add("hidden");
@@ -442,9 +451,6 @@
   function initSelects(){
     $("qCat").innerHTML = CATEGORIES.map(function(c){ return "<option>"+esc(c)+"</option>"; }).join("");
     $("rCat").innerHTML = RES_CATEGORIES.map(function(c){ return "<option>"+esc(c)+"</option>"; }).join("");
-    $("qCat").onchange = function(){
-      $("qSecretRow").classList.toggle("hidden", this.value !== "STR 보고");
-    };
   }
   function setQnaFilter(c){ qnaFilter = c; initChips(); renderQna(); }
   function setResFilter(c){ resFilter = c; initChips(); renderRes(); }
@@ -490,7 +496,7 @@
       if (stat === "답변대기" && q.answer) return false;
       if (stat === "답변완료" && !q.answer) return false;
       if (s) {
-        var hay = isLocked(q) ? (q.title||"") : ((q.title||"") + (q.content||"") + (q.answer||""));
+        var hay = answerLocked(q) ? ((q.title||"") + (q.content||"")) : ((q.title||"") + (q.content||"") + (q.answer||""));
         if (hay.toLowerCase().indexOf(s) < 0) return false;
       }
       return true;
@@ -515,13 +521,20 @@
       if (open) {
         html += '<div class="cardBody"><p class="qText">'+esc(q.content)+'</p>';
         if (q.answer) {
-          html += '<div class="answerBox"><div class="answerHead">담당 부서 답변 <span class="metaText">'+fmt(q.answered_at)+'</span></div>' +
-                  '<p class="qText">'+esc(q.answer)+'</p></div>';
+          if (answerLocked(q)) {
+            html += '<div class="answerBox"><div class="answerHead">담당 부서 답변 🔒</div>' +
+                    '<p class="qText" style="color:var(--muted)">STR 보고 답변은 비밀번호를 입력해야 열람할 수 있습니다. 비밀번호는 담당 부서에 직접 문의해주세요.</p>' +
+                    '<div style="margin-top:10px"><button class="btnMain" onclick="unlockAnswer(\''+esc(q.id)+'\')">답변 보기</button></div></div>';
+          } else {
+            html += '<div class="answerBox"><div class="answerHead">담당 부서 답변 <span class="metaText">'+fmt(q.answered_at)+'</span></div>' +
+                    '<p class="qText">'+esc(q.answer)+'</p></div>';
+          }
         }
         if (isAdmin()) {
           var draft = answerDrafts[q.id] != null ? answerDrafts[q.id] : (q.answer || "");
           html += '<div style="margin-top:14px">' +
             '<textarea class="ta" rows="4" id="ans_'+esc(q.id)+'" placeholder="'+(q.answer?"답변 수정 내용 입력":"답변 입력")+'" oninput="answerDrafts[\''+esc(q.id)+'\']=this.value">'+esc(draft)+'</textarea>' +
+            (q.category === "STR 보고" ? '<input class="inp" id="anspw_'+esc(q.id)+'" placeholder="답변 열람 비밀번호 (해당 지점에 직접 전달하세요)" value="'+esc(q.secret_pw||"")+'">' : '') +
             '<div class="btnRow">' +
               '<button class="btnMain" onclick="submitAnswer(\''+esc(q.id)+'\')">'+(q.answer?"답변 수정":"답변 등록")+'</button>' +
               '<button class="btnDel" onclick="deleteQuestion(\''+esc(q.id)+'\')">질문 삭제</button>' +
@@ -532,28 +545,21 @@
       return html + '</article>';
     }).join("");
   }
-  function toggleQ(id){
-    if (expandedId === id) { expandedId = null; renderQna(); return; }
-    var q = questions.find(function(x){ return x.id === id; });
-    if (q && isLocked(q)) {
-      var pw = prompt("STR 보고 관련 비밀글입니다.\n글 비밀번호를 입력해주세요.\n\n※ 비밀번호를 모르는 경우, STR 내용은 누설 금지 대상이므로 담당 부서로 직접 문의해주세요.");
-      if (pw === null) return;
-      if (pw === q.secret_pw) {
-        unlockedIds[id] = true;
-      } else {
-        toast("비밀번호가 일치하지 않습니다. 내용 확인은 담당 부서로 직접 문의해주세요.");
-        return;
-      }
-    }
-    expandedId = id; renderQna();
-  }
+  function toggleQ(id){ expandedId = (expandedId === id) ? null : id; renderQna(); }
 
   var unlockedIds = {};
-  function isLocked(q){
-    if (q.category !== "STR 보고" || !q.secret_pw) return false;
+  function answerLocked(q){
+    if (q.category !== "STR 보고" || !q.secret_pw || !q.answer) return false;
     if (isAdmin()) return false;
-    if (q.branch === user.branch) return false;
     return !unlockedIds[q.id];
+  }
+  function unlockAnswer(id){
+    var q = questions.find(function(x){ return x.id === id; });
+    if (!q) return;
+    var pw = prompt("STR 보고 답변은 비밀번호를 입력해야 열람할 수 있습니다.\n답변 열람 비밀번호를 입력해주세요.\n\n※ 비밀번호는 담당 부서에 직접 문의해주세요.");
+    if (pw === null) return;
+    if (pw === q.secret_pw) { unlockedIds[id] = true; renderQna(); }
+    else toast("비밀번호가 일치하지 않습니다. 담당 부서로 직접 문의해주세요.");
   }
 
   // ── 자료실 렌더링
@@ -586,20 +592,15 @@
   async function submitQuestion(){
     var title = $("qTitle").value.trim(), content = $("qContent").value.trim();
     if (!title || !content) { toast("제목과 내용을 입력해주세요."); return; }
-    var isStr = $("qCat").value === "STR 보고";
-    var secret = $("qSecret").value.trim();
-    if (isStr && !secret) { toast("STR 보고 질문은 글 비밀번호를 설정해주세요."); return; }
     $("qSubmit").disabled = true; $("qSubmit").textContent = "등록 중…";
     try {
       var res = await db.from("questions").insert({
         title: title, content: content,
         category: $("qCat").value, branch: user.branch,
-        author: $("qAuthor").value.trim() || "익명",
-        secret_pw: isStr ? secret : null
+        author: $("qAuthor").value.trim() || "익명"
       });
       if (res.error) throw res.error;
-      $("qTitle").value = ""; $("qContent").value = ""; $("qAuthor").value = ""; $("qSecret").value = "";
-      $("qSecretRow").classList.add("hidden"); $("qCat").selectedIndex = 0;
+      $("qTitle").value = ""; $("qContent").value = ""; $("qAuthor").value = "";
       closeModal("qModal"); toast("질문이 등록되었습니다.");
       await loadData();
     } catch (e) {
@@ -613,10 +614,16 @@
     var el = $("ans_"+id);
     var text = (el ? el.value : "").trim();
     if (!text) { toast("답변 내용을 입력해주세요."); return; }
+    var q = questions.find(function(x){ return x.id === id; });
+    var upd = { answer: text, answered_at: new Date().toISOString() };
+    if (q && q.category === "STR 보고") {
+      var pwEl = $("anspw_"+id);
+      var apw = (pwEl ? pwEl.value : "").trim();
+      if (!apw) { toast("STR 보고 답변은 열람 비밀번호를 설정해주세요."); return; }
+      upd.secret_pw = apw;
+    }
     try {
-      var res = await db.from("questions").update({
-        answer: text, answered_at: new Date().toISOString()
-      }).eq("id", id);
+      var res = await db.from("questions").update(upd).eq("id", id);
       if (res.error) throw res.error;
       delete answerDrafts[id];
       toast("답변이 등록되었습니다.");
@@ -641,15 +648,30 @@
   async function submitResource(){
     var title = $("rTitle").value.trim();
     if (!title) { toast("자료 제목을 입력해주세요."); return; }
+    var file = $("rFile").files[0] || null;
+    var link = $("rLink").value.trim();
+    if (file && file.size > 50 * 1024 * 1024) { toast("파일은 50MB 이하만 업로드할 수 있습니다."); return; }
     $("rSubmit").disabled = true; $("rSubmit").textContent = "등록 중…";
     try {
+      // 파일이 있으면 Supabase Storage에 업로드 후 링크 생성
+      if (file) {
+        var ext = (file.name.split(".").pop() || "bin").toLowerCase();
+        var path = Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7) + "." + ext;
+        var up = await db.storage.from("files").upload(path, file);
+        if (up.error) throw up.error;
+        var pub = db.storage.from("files").getPublicUrl(path);
+        link = pub.data.publicUrl;
+        // 원본 파일명을 설명에 함께 기록
+        var d = $("rDesc").value.trim();
+        $("rDesc").value = d ? (d + " (파일: " + file.name + ")") : ("파일: " + file.name);
+      }
       var res = await db.from("resources").insert({
         title: title, category: $("rCat").value,
-        descr: $("rDesc").value.trim(), link: $("rLink").value.trim(),
+        descr: $("rDesc").value.trim(), link: link,
         branch: user.branch
       });
       if (res.error) throw res.error;
-      $("rTitle").value = ""; $("rDesc").value = ""; $("rLink").value = "";
+      $("rTitle").value = ""; $("rDesc").value = ""; $("rLink").value = ""; $("rFile").value = "";
       closeModal("rModal"); toast("자료가 등록되었습니다.");
       await loadData();
     } catch (e) {
@@ -669,6 +691,49 @@
     } catch (e) {
       toast("삭제에 실패했습니다.");
     }
+  }
+
+  // ═══ 푸시 알림 ═══
+  var VAPID_PUBLIC_KEY = "BLLxS9gQoAOk4p1Cvl_lwOMcX5DsfjdOOt_NlkvheXaZkGFpC6HScxaMGXKqjQpZKOaaHtlF_CMELMz8X1Z_rIo";
+
+  function urlB64ToUint8(base64String){
+    var padding = "=".repeat((4 - base64String.length % 4) % 4);
+    var base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    var raw = window.atob(base64);
+    var arr = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+    return arr;
+  }
+
+  async function setupPush(){
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return;
+      var reg = await navigator.serviceWorker.ready;
+      var perm = Notification.permission;
+      if (perm === "default") perm = await Notification.requestPermission();
+      if (perm !== "granted") return;
+      var sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlB64ToUint8(VAPID_PUBLIC_KEY)
+        });
+      }
+      await db.from("push_subscriptions").upsert({
+        endpoint: sub.endpoint,
+        subscription: sub.toJSON(),
+        branch: user.branch,
+        role: user.role
+      });
+    } catch(e){}
+  }
+
+  async function removePush(){
+    try {
+      var reg = await navigator.serviceWorker.ready;
+      var sub = await reg.pushManager.getSubscription();
+      if (sub) await db.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+    } catch(e){}
   }
 
   // ═══ 앱 설치 안내 (PWA) ═══
