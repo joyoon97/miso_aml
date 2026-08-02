@@ -218,7 +218,7 @@
     <input class="inp" id="loginPw" type="password" placeholder="비밀번호" autocomplete="current-password">
     <div class="errText hidden" id="loginErr">아이디 또는 비밀번호가 일치하지 않습니다.</div>
     <button class="btnMain" style="width:100%;padding:12px" onclick="doLogin()">로그인</button>
-    <p class="loginFoot">계정 문의: 담당 부서</p>
+    <p class="loginFoot">계정 문의: 관리자</p>
   </div>
 </div>
 
@@ -229,10 +229,11 @@
       <div>
         <div class="eyebrow"><img class="ciLogo" src="icons/logo.png" alt="">미소신용협동조합 · 평생어부바 🐷</div>
         <h1>자금세탁방지 Q&A</h1>
-        <p class="subText">AML 업무 중 궁금한 점을 올려주세요. 담당 부서에서 확인 후 답변드립니다.</p>
+        <p class="subText">AML 업무 중 궁금한 점을 올려주세요. 관리자가 확인 후 답변드립니다.</p>
       </div>
       <div class="userBox">
         <span class="userTag" id="userTag"></span>
+        <button class="btnLogout" onclick="checkPush()">알림 상태</button>
         <button class="btnLogout" onclick="logout()">로그아웃</button>
       </div>
     </div>
@@ -347,7 +348,7 @@
     miso03: { pw: "miso03", branch: "월곶지점", role: "branch" },
     miso04: { pw: "miso04", branch: "하중지점", role: "branch" },
     miso07: { pw: "miso07", branch: "배곧지점", role: "branch" },
-    miso:   { pw: "miso",   branch: "기획실",   role: "admin"  }
+    miso:   { pw: "miso",   branch: "관리자",   role: "admin"  }
   };
 
   var CATEGORIES = ["고객확인(CDD/EDD)","CTR 보고","STR 보고","교육·자격","제도·규정","기타"];
@@ -397,7 +398,7 @@
     $("loginErr").classList.add("hidden");
     $("loginPage").classList.add("hidden");
     $("mainPage").classList.remove("hidden");
-    $("userTag").textContent = user.branch + (isAdmin() ? " (관리자)" : "");
+    $("userTag").textContent = user.branch;
     $("qBranch").textContent = user.branch;
     $("rBranch").textContent = user.branch;
     $("askBtn").classList.toggle("hidden", isAdmin());
@@ -522,11 +523,11 @@
         html += '<div class="cardBody"><p class="qText">'+esc(q.content)+'</p>';
         if (q.answer) {
           if (answerLocked(q)) {
-            html += '<div class="answerBox"><div class="answerHead">담당 부서 답변 🔒</div>' +
+            html += '<div class="answerBox"><div class="answerHead">관리자 답변 🔒</div>' +
                     '<p class="qText" style="color:var(--muted)">STR 보고 답변은 누설 금지 대상입니다. 질문을 등록한 지점만 계정 비밀번호 확인 후 열람할 수 있습니다.</p>' +
                     '<div style="margin-top:10px"><button class="btnMain" onclick="unlockAnswer(\''+esc(q.id)+'\')">답변 보기</button></div></div>';
           } else {
-            html += '<div class="answerBox"><div class="answerHead">담당 부서 답변 <span class="metaText">'+fmt(q.answered_at)+'</span></div>' +
+            html += '<div class="answerBox"><div class="answerHead">관리자 답변 <span class="metaText">'+fmt(q.answered_at)+'</span></div>' +
                     '<p class="qText">'+esc(q.answer)+'</p></div>';
           }
         }
@@ -557,7 +558,7 @@
     var q = questions.find(function(x){ return x.id === id; });
     if (!q) return;
     if (q.branch !== user.branch) {
-      alert("STR 보고 답변은 질문을 등록한 지점만 열람할 수 있습니다.\n\n내용 확인이 필요한 경우 담당 부서로 직접 문의해주세요.");
+      alert("STR 보고 답변은 질문을 등록한 지점만 열람할 수 있습니다.\n\n내용 확인이 필요한 경우 관리자에게 직접 문의해주세요.");
       return;
     }
     var pw = prompt("STR 보고 답변은 누설 금지 대상입니다.\n본인 지점 계정의 비밀번호를 입력해주세요.");
@@ -702,13 +703,32 @@
     return arr;
   }
 
+  var pushDiag = "";
+
+  async function checkPush(){
+    var lines = [];
+    var standalone = isStandalone();
+    lines.push("설치앱으로 실행: " + (standalone ? "예" : "아니오 (브라우저)"));
+    lines.push("푸시 지원: " + (("PushManager" in window) ? "예" : "아니오"));
+    lines.push("알림 권한: " + (("Notification" in window) ? Notification.permission : "미지원"));
+    try {
+      var reg = await navigator.serviceWorker.ready;
+      var sub = await reg.pushManager.getSubscription();
+      lines.push("기기 등록: " + (sub ? "완료" : "안 됨"));
+    } catch(e){ lines.push("기기 등록: 확인 실패"); }
+    if (pushDiag) lines.push("메시지: " + pushDiag);
+    if (isIos() && !standalone) lines.push("\n※ 아이폰은 홈 화면에 추가한 앱으로 실행해야 알림을 받을 수 있습니다.");
+    lines.push("\n[다시 시도]를 누르면 알림 등록을 재시도합니다.");
+    if (confirm(lines.join("\n"))) { pushDiag = ""; await setupPush(); alert(pushDiag || "알림 등록을 완료했습니다."); }
+  }
+
   async function setupPush(){
     try {
-      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return;
+      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) { pushDiag = "이 브라우저는 푸시 알림을 지원하지 않습니다."; return; }
       var reg = await navigator.serviceWorker.ready;
       var perm = Notification.permission;
       if (perm === "default") perm = await Notification.requestPermission();
-      if (perm !== "granted") return;
+      if (perm !== "granted") { pushDiag = "알림 권한이 허용되지 않았습니다 (현재: " + perm + ")."; return; }
       var sub = await reg.pushManager.getSubscription();
       if (!sub) {
         sub = await reg.pushManager.subscribe({
@@ -716,13 +736,14 @@
           applicationServerKey: urlB64ToUint8(VAPID_PUBLIC_KEY)
         });
       }
-      await db.from("push_subscriptions").upsert({
+      var r = await db.from("push_subscriptions").upsert({
         endpoint: sub.endpoint,
         subscription: sub.toJSON(),
         branch: user.branch,
         role: user.role
       });
-    } catch(e){}
+      if (r.error) pushDiag = "서버 등록 실패: " + r.error.message;
+    } catch(e){ pushDiag = "오류: " + (e && e.message ? e.message : String(e)); }
   }
 
   async function removePush(){
