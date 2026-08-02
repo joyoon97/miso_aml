@@ -181,6 +181,29 @@
   }
   .hidden { display: none !important; }
 
+  /* ── 당겨서 새로고침 */
+  #ptr {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 250;
+    display: flex; align-items: flex-end; justify-content: center;
+    height: 0; overflow: hidden; pointer-events: none;
+    background: linear-gradient(180deg, rgba(0,86,167,.10), transparent);
+  }
+  #ptrInner {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 700; color: var(--navy);
+    padding-bottom: 8px;
+  }
+  #ptrIcon {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2.5px solid var(--line); border-top-color: var(--navy);
+    transition: transform .1s linear;
+  }
+  #ptr.loading #ptrIcon { animation: ptrSpin .7s linear infinite; }
+  @keyframes ptrSpin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    #ptr.loading #ptrIcon { animation: none; }
+  }
+
   /* ── 설치 안내 배너 */
   #installBanner {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
@@ -315,6 +338,8 @@
   </div>
 </div>
 
+<div id="ptr"><div id="ptrInner"><span id="ptrIcon"></span><span id="ptrText">당겨서 새로고침</span></div></div>
+
 <div id="toast"></div>
 
 <!-- 앱 설치 안내 배너 -->
@@ -404,6 +429,7 @@
     $("askBtn").classList.toggle("hidden", isAdmin());
     initChips(); initSelects(); loadData();
     setupPush();
+    clearBadge();
   }
 
   function doLogin(){
@@ -753,6 +779,70 @@
       if (sub) await db.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
     } catch(e){}
   }
+
+  // ═══ 당겨서 새로고침 ═══
+  (function(){
+    var startY = 0, pulling = false, dist = 0, refreshing = false;
+    var THRESHOLD = 70, MAX = 100;
+    var ptr = $("ptr"), ptrText = $("ptrText"), ptrIcon = $("ptrIcon");
+
+    function atTop(){
+      return (window.scrollY || document.documentElement.scrollTop || 0) <= 0;
+    }
+    function reset(){
+      ptr.style.height = "0px";
+      ptr.classList.remove("loading");
+      ptrIcon.style.transform = "";
+      ptrText.textContent = "당겨서 새로고침";
+      pulling = false; dist = 0;
+    }
+
+    document.addEventListener("touchstart", function(e){
+      if (refreshing || !user || !atTop()) return;
+      // 모달이 열려 있으면 동작 안 함
+      if (!$("qModal").classList.contains("hidden") || !$("rModal").classList.contains("hidden")) return;
+      startY = e.touches[0].clientY;
+      pulling = true;
+    }, { passive: true });
+
+    document.addEventListener("touchmove", function(e){
+      if (!pulling || refreshing) return;
+      var d = e.touches[0].clientY - startY;
+      if (d <= 0) { reset(); return; }
+      dist = Math.min(d * 0.5, MAX);
+      ptr.style.height = dist + "px";
+      ptrIcon.style.transform = "rotate(" + (dist * 4) + "deg)";
+      ptrText.textContent = dist >= THRESHOLD ? "놓으면 새로고침" : "당겨서 새로고침";
+    }, { passive: true });
+
+    document.addEventListener("touchend", async function(){
+      if (!pulling || refreshing) return;
+      if (dist >= THRESHOLD) {
+        refreshing = true;
+        ptr.classList.add("loading");
+        ptr.style.height = "50px";
+        ptrText.textContent = "새로고침 중…";
+        try { await loadData(); } catch(e){}
+        setTimeout(function(){ refreshing = false; reset(); toast("최신 내용으로 업데이트했습니다."); }, 400);
+      } else {
+        reset();
+      }
+    }, { passive: true });
+  })();
+
+  // ═══ 앱 아이콘 배지 초기화 ═══
+  function clearBadge(){
+    try { if (navigator.clearAppBadge) navigator.clearAppBadge(); } catch(e){}
+    try {
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: "CLEAR_BADGE" });
+      }
+    } catch(e){}
+  }
+  document.addEventListener("visibilitychange", function(){
+    if (!document.hidden && user) clearBadge();
+  });
+  window.addEventListener("focus", function(){ if (user) clearBadge(); });
 
   // ═══ 앱 설치 안내 (PWA) ═══
   if ("serviceWorker" in navigator) {
