@@ -383,7 +383,10 @@
     </p>
     <input class="inp" id="rFile" type="file" accept=".hwp,.hwpx,.pdf,.ppt,.pptx,.doc,.docx,.jpg,.jpeg,.png" style="padding:9px">
     <p style="margin:6px 0 4px;font-size:12px;color:var(--muted)" id="rFileHint"></p>
-    <input class="inp" id="rLink" placeholder="자료 링크 (법령 원문, 구글드라이브 등 공유 URL) — 파일 첨부 없이 링크만 등록해도 됩니다">
+    <input class="inp" id="rLink" placeholder="원문 링크 (예: 국가법령정보센터 주소) — 파일과 함께 등록하면 버튼이 각각 따로 생깁니다">
+    <p style="margin:-4px 0 8px;font-size:11.5px;color:var(--muted);line-height:1.5">
+      파일과 링크를 둘 다 넣으면 "바로보기"와 "원문 들어가기" 버튼이 각각 생깁니다. 하나만 넣어도 됩니다.
+    </p>
     <div class="btnRow">
       <button class="btnMain" id="rSubmit" onclick="submitResource()">등록</button>
       <button class="btnGhost" onclick="resetRForm();closeModal('rModal')">취소</button>
@@ -504,7 +507,9 @@
     $("rDesc").value = r.descr || "";
     $("rLink").value = r.link || "";
     $("rFile").value = "";
-    $("rFileHint").textContent = "새 파일을 선택하면 기존 파일 대신 교체됩니다. 비워두면 기존 링크가 그대로 유지됩니다.";
+    $("rFileHint").textContent = r.file_link
+      ? "이미 첨부된 파일이 있습니다. 새 파일을 선택하면 교체되고, 비워두면 기존 파일이 유지됩니다."
+      : "";
     openModal("rModal");
   }
   function closeModal(id){ $(id).classList.add("hidden"); }
@@ -877,8 +882,7 @@
       var open = expandedResId === r.id;
       var canDel = isAdmin() || r.branch === user.branch;
       var isLaw = r.category === "법령 및 규정";
-      var btnLabel = isLaw ? "원문 들어가기" : "자료 열기";
-      var prev = resolvePreviewUrl(r.link);
+      var prevFile = resolvePreviewUrl(r.file_link);
 
       var html = '<article class="card">' +
         '<button class="cardHead" onclick="toggleRes(\''+esc(r.id)+'\')">' +
@@ -892,10 +896,15 @@
       if (open) {
         html += '<div class="cardBody">';
         if (r.descr) html += '<p class="qText" style="margin-bottom:12px">'+esc(r.descr)+'</p>';
-        if (prev.note) html += '<p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">'+esc(prev.note)+'</p>';
+        if (r.file_link && prevFile.note) html += '<p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">'+esc(prevFile.note)+'</p>';
         html += '<div class="btnRow" style="flex-wrap:wrap">';
+        if (r.file_link) {
+          var fileLabel = isLaw ? "PDF 바로보기" : "자료 열기";
+          html += '<a class="btnMain" style="text-decoration:none;display:inline-block" href="'+esc(prevFile.url)+'" target="_blank" rel="noreferrer">'+fileLabel+'</a>';
+        }
         if (r.link) {
-          html += '<a class="btnMain" style="text-decoration:none;display:inline-block" href="'+esc(prev.url)+'" target="_blank" rel="noreferrer">'+btnLabel+'</a>';
+          var linkLabel = isLaw ? "원문 들어가기" : "관련 링크";
+          html += '<a class="'+(r.file_link ? "btnGhost" : "btnMain")+'" style="text-decoration:none;display:inline-block" href="'+esc(r.link)+'" target="_blank" rel="noreferrer">'+linkLabel+'</a>';
         }
         if (canDel) {
           html += '<button class="btnGhost" onclick="openEditResource(\''+esc(r.id)+'\')">수정</button>';
@@ -968,17 +977,21 @@
     $("rSubmit").disabled = true; $("rSubmit").textContent = isEdit ? "저장 중…" : "등록 중…";
     try {
       var descr = $("rDesc").value.trim();
-      // 파일이 새로 선택된 경우에만 업로드하여 링크 교체 (수정 시 파일을 안 바꾸면 기존 링크 유지)
+      // 기존 첨부파일 유지 (수정 시 새 파일을 안 고르면 기존 파일 그대로)
+      var fileLink = null;
+      if (isEdit) {
+        var existing = resources.find(function(x){ return x.id === editingResourceId; });
+        fileLink = existing ? (existing.file_link || null) : null;
+      }
       if (file) {
         var ext = (file.name.split(".").pop() || "bin").toLowerCase();
         var path = Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7) + "." + ext;
         var up = await db.storage.from("files").upload(path, file);
         if (up.error) throw up.error;
         var pub = db.storage.from("files").getPublicUrl(path);
-        link = pub.data.publicUrl;
-        descr = descr ? (descr + " (파일: " + file.name + ")") : ("파일: " + file.name);
+        fileLink = pub.data.publicUrl;
       }
-      var payload = { title: title, category: $("rCat").value, descr: descr, link: link };
+      var payload = { title: title, category: $("rCat").value, descr: descr, link: link || null, file_link: fileLink };
       var res;
       if (isEdit) {
         res = await db.from("resources").update(payload).eq("id", editingResourceId);
