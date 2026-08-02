@@ -824,7 +824,7 @@
         items.push({
           time: q.created_at,
           icon: "🆕",
-          text: "새 질문이 등록되었습니다",
+          text: "새 질문",
           sub: "[" + q.branch + "] " + q.title,
           go: function(id){ return function(){ closeModal("historyModal"); switchTab("qna"); goToQuestion(id); }; }(q.id)
         });
@@ -835,7 +835,7 @@
           items.push({
             time: q.answered_at || q.created_at,
             icon: "✅",
-            text: "질문에 답변이 등록되었습니다",
+            text: "답변 등록",
             sub: q.title,
             go: function(id){ return function(){ closeModal("historyModal"); switchTab("qna"); goToQuestion(id); }; }(q.id)
           });
@@ -845,7 +845,7 @@
         items.push({
           time: n.created_at,
           icon: "📢",
-          text: "새 공지사항이 등록되었습니다",
+          text: "새 공지사항",
           sub: n.title,
           go: function(){ closeModal("historyModal"); switchTab("notice"); }
         });
