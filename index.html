@@ -410,7 +410,7 @@
     var pw = $("loginPw").value;
     var acc = ACCOUNTS[id];
     if (acc && acc.pw === pw) {
-      user = { branch: acc.branch, role: acc.role };
+      user = { id: id, branch: acc.branch, role: acc.role };
       try { localStorage.setItem("misoAmlUser", JSON.stringify(user)); } catch(e){}
       enterMain();
     } else {
@@ -423,7 +423,7 @@
     var saved = localStorage.getItem("misoAmlUser");
     if (saved) {
       var u = JSON.parse(saved);
-      if (u && u.branch && u.role) { user = u; enterMain(); }
+      if (u && u.id && u.branch && u.role && ACCOUNTS[u.id]) { user = u; enterMain(); }
     }
   } catch(e){}
   $("loginId").addEventListener("keydown", function(e){ if(e.key==="Enter") doLogin(); });
@@ -508,7 +508,7 @@
     }
     el.innerHTML = list.map(function(q){
       var open = expandedId === q.id;
-      var lockMark = (q.category === "STR 보고" && q.secret_pw) ? "🔒 " : "";
+      var lockMark = (q.category === "STR 보고") ? "🔒 " : "";
       var html = '<article class="card">' +
         '<button class="cardHead" onclick="toggleQ(\''+esc(q.id)+'\')">' +
           '<div style="flex:1;min-width:0">' +
@@ -523,7 +523,7 @@
         if (q.answer) {
           if (answerLocked(q)) {
             html += '<div class="answerBox"><div class="answerHead">담당 부서 답변 🔒</div>' +
-                    '<p class="qText" style="color:var(--muted)">STR 보고 답변은 비밀번호를 입력해야 열람할 수 있습니다. 비밀번호는 담당 부서에 직접 문의해주세요.</p>' +
+                    '<p class="qText" style="color:var(--muted)">STR 보고 답변은 누설 금지 대상입니다. 질문을 등록한 지점만 계정 비밀번호 확인 후 열람할 수 있습니다.</p>' +
                     '<div style="margin-top:10px"><button class="btnMain" onclick="unlockAnswer(\''+esc(q.id)+'\')">답변 보기</button></div></div>';
           } else {
             html += '<div class="answerBox"><div class="answerHead">담당 부서 답변 <span class="metaText">'+fmt(q.answered_at)+'</span></div>' +
@@ -534,7 +534,7 @@
           var draft = answerDrafts[q.id] != null ? answerDrafts[q.id] : (q.answer || "");
           html += '<div style="margin-top:14px">' +
             '<textarea class="ta" rows="4" id="ans_'+esc(q.id)+'" placeholder="'+(q.answer?"답변 수정 내용 입력":"답변 입력")+'" oninput="answerDrafts[\''+esc(q.id)+'\']=this.value">'+esc(draft)+'</textarea>' +
-            (q.category === "STR 보고" ? '<input class="inp" id="anspw_'+esc(q.id)+'" placeholder="답변 열람 비밀번호 (해당 지점에 직접 전달하세요)" value="'+esc(q.secret_pw||"")+'">' : '') +
+
             '<div class="btnRow">' +
               '<button class="btnMain" onclick="submitAnswer(\''+esc(q.id)+'\')">'+(q.answer?"답변 수정":"답변 등록")+'</button>' +
               '<button class="btnDel" onclick="deleteQuestion(\''+esc(q.id)+'\')">질문 삭제</button>' +
@@ -549,17 +549,21 @@
 
   var unlockedIds = {};
   function answerLocked(q){
-    if (q.category !== "STR 보고" || !q.secret_pw || !q.answer) return false;
+    if (q.category !== "STR 보고" || !q.answer) return false;
     if (isAdmin()) return false;
     return !unlockedIds[q.id];
   }
   function unlockAnswer(id){
     var q = questions.find(function(x){ return x.id === id; });
     if (!q) return;
-    var pw = prompt("STR 보고 답변은 비밀번호를 입력해야 열람할 수 있습니다.\n답변 열람 비밀번호를 입력해주세요.\n\n※ 비밀번호는 담당 부서에 직접 문의해주세요.");
+    if (q.branch !== user.branch) {
+      alert("STR 보고 답변은 질문을 등록한 지점만 열람할 수 있습니다.\n\n내용 확인이 필요한 경우 담당 부서로 직접 문의해주세요.");
+      return;
+    }
+    var pw = prompt("STR 보고 답변은 누설 금지 대상입니다.\n본인 지점 계정의 비밀번호를 입력해주세요.");
     if (pw === null) return;
-    if (pw === q.secret_pw) { unlockedIds[id] = true; renderQna(); }
-    else toast("비밀번호가 일치하지 않습니다. 담당 부서로 직접 문의해주세요.");
+    if (ACCOUNTS[user.id] && ACCOUNTS[user.id].pw === pw) { unlockedIds[id] = true; renderQna(); }
+    else toast("비밀번호가 일치하지 않습니다.");
   }
 
   // ── 자료실 렌더링
@@ -614,14 +618,7 @@
     var el = $("ans_"+id);
     var text = (el ? el.value : "").trim();
     if (!text) { toast("답변 내용을 입력해주세요."); return; }
-    var q = questions.find(function(x){ return x.id === id; });
     var upd = { answer: text, answered_at: new Date().toISOString() };
-    if (q && q.category === "STR 보고") {
-      var pwEl = $("anspw_"+id);
-      var apw = (pwEl ? pwEl.value : "").trim();
-      if (!apw) { toast("STR 보고 답변은 열람 비밀번호를 설정해주세요."); return; }
-      upd.secret_pw = apw;
-    }
     try {
       var res = await db.from("questions").update(upd).eq("id", id);
       if (res.error) throw res.error;
