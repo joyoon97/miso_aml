@@ -319,7 +319,12 @@
     <div class="topBar">
       <span class="userTag" id="userTag"></span>
       <div class="iconBtnRow">
-        <button class="iconBtn" onclick="openHistory()" title="알림 내역" aria-label="알림 내역">🔔</button>
+        <button class="iconBtn" style="position:relative;overflow:visible" onclick="openHistory()" title="알림 내역" aria-label="알림 내역">
+          <span style="display:block">🔔</span>
+          <span id="bellBadge" class="hidden" style="position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;
+            padding:0 3px;border-radius:999px;background:#E4402A;color:#ffffff;font-size:10px;font-weight:800;
+            line-height:17px;text-align:center;box-shadow:0 0 0 2px var(--navy);z-index:5">0</span>
+        </button>
         <button class="iconBtn" onclick="logout()" title="로그아웃" aria-label="로그아웃">🚪</button>
       </div>
     </div>
@@ -732,7 +737,7 @@
       questions = q.data || [];
       resources = r.data || [];
       notices = (n && n.data) || [];
-      renderQna(); renderRes(); renderPending(); renderPopular();
+      renderQna(); renderRes(); renderPending(); renderPopular(); updateBellBadge();
       if (!$("noticeSection").classList.contains("hidden")) renderNotices();
     } catch (e) {
       toast("데이터를 불러오지 못했습니다. 연결 정보를 확인해주세요.");
@@ -875,19 +880,7 @@
   // ── 알림 내역
   function historyClearedKey(){ return "misoAmlHistoryCleared_" + (user ? user.id : ""); }
 
-  function clearHistory(){
-    try { localStorage.setItem(historyClearedKey(), new Date().toISOString()); } catch(e){}
-    openHistory();
-    toast("알림 내역을 모두 확인 처리했습니다.");
-  }
-
-  function openHistory(){
-    var clearedAt = 0;
-    try {
-      var c = localStorage.getItem(historyClearedKey());
-      if (c) clearedAt = new Date(c).getTime();
-    } catch(e){}
-
+  function collectHistoryItems(){
     var items = [];
     if (isAdmin()) {
       questions.forEach(function(q){
@@ -922,7 +915,42 @@
       });
     }
     items.sort(function(a,b){ return new Date(b.time) - new Date(a.time); });
-    items = items.filter(function(it){ return new Date(it.time).getTime() > clearedAt; });
+    return items;
+  }
+
+  function getClearedAt(){
+    var clearedAt = 0;
+    try {
+      var c = localStorage.getItem(historyClearedKey());
+      if (c) clearedAt = new Date(c).getTime();
+    } catch(e){}
+    return clearedAt;
+  }
+
+  function updateBellBadge(){
+    if (!user) return;
+    var clearedAt = getClearedAt();
+    var n = collectHistoryItems().filter(function(it){ return new Date(it.time).getTime() > clearedAt; }).length;
+    var badge = $("bellBadge");
+    if (!badge) return;
+    if (n > 0) {
+      badge.textContent = n > 99 ? "99+" : String(n);
+      badge.classList.remove("hidden");
+    } else {
+      badge.classList.add("hidden");
+    }
+  }
+
+  function clearHistory(){
+    try { localStorage.setItem(historyClearedKey(), new Date().toISOString()); } catch(e){}
+    openHistory();
+    updateBellBadge();
+    toast("알림 내역을 모두 확인 처리했습니다.");
+  }
+
+  function openHistory(){
+    var clearedAt = getClearedAt();
+    var items = collectHistoryItems().filter(function(it){ return new Date(it.time).getTime() > clearedAt; });
     items = items.slice(0, 30);
 
     var el = $("historyList");
