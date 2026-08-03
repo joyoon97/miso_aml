@@ -402,8 +402,13 @@
     </div>
     <input class="inp" id="qTitle" placeholder="제목">
     <textarea class="ta" id="qContent" rows="6" placeholder="질문 내용 (고객 개인정보는 입력하지 마세요)"></textarea>
-    <input class="inp" id="qAuthor" list="nameList" placeholder="작성자 선택 (검색 가능, ㄱㄴㄷ순)" autocomplete="off">
-    <datalist id="nameList"></datalist>
+    <div style="position:relative">
+      <input class="inp" id="qAuthor" placeholder="작성자 선택 (검색 가능, ㄱㄴㄷ순)" autocomplete="off"
+        oninput="filterAuthorList()" onfocus="filterAuthorList()">
+      <div id="authorDropdown" class="hidden" style="position:absolute;top:100%;left:0;right:0;z-index:20;
+        background:#fff;border:1px solid var(--line);border-radius:8px;margin-top:-6px;
+        max-height:220px;overflow-y:auto;box-shadow:0 6px 16px rgba(27,42,74,.15)"></div>
+    </div>
     <div class="btnRow">
       <button class="btnMain" id="qSubmit" onclick="submitQuestion()">등록</button>
       <button class="btnGhost" onclick="closeModal('qModal')">취소</button>
@@ -675,8 +680,32 @@
   function initSelects(){
     $("qCat").innerHTML = CATEGORIES.map(function(c){ return "<option>"+esc(c)+"</option>"; }).join("");
     $("rCat").innerHTML = RES_CATEGORIES.map(function(c){ return "<option>"+esc(c)+"</option>"; }).join("");
-    $("nameList").innerHTML = NAMES.map(function(n){ return '<option value="'+esc(n)+'">'; }).join("");
   }
+
+  // ── 작성자 검색 드롭다운 (아이폰 datalist 미지원 대응)
+  function filterAuthorList(){
+    var q = $("qAuthor").value.trim();
+    var matches = q ? NAMES.filter(function(n){ return n.indexOf(q) >= 0; }) : NAMES;
+    var dd = $("authorDropdown");
+    if (matches.length === 0) {
+      dd.innerHTML = '<div style="padding:10px 12px;font-size:13px;color:var(--muted)">일치하는 이름이 없습니다.</div>';
+    } else {
+      dd.innerHTML = matches.map(function(n){
+        return '<div style="padding:10px 12px;font-size:14px;cursor:pointer" ' +
+          'onmousedown="event.preventDefault();selectAuthor(\''+esc(n)+'\')">' + esc(n) + '</div>';
+      }).join("");
+    }
+    dd.classList.remove("hidden");
+  }
+  function selectAuthor(name){
+    $("qAuthor").value = name;
+    $("authorDropdown").classList.add("hidden");
+  }
+  document.addEventListener("click", function(e){
+    if (e.target.id !== "qAuthor" && !$("authorDropdown").contains(e.target)) {
+      $("authorDropdown").classList.add("hidden");
+    }
+  });
   function setQnaFilter(c){ qnaFilter = c; initChips(); renderQna(); }
   function setResFilter(c){ resFilter = c; initChips(); renderRes(); }
 
