@@ -402,7 +402,8 @@
     </div>
     <input class="inp" id="qTitle" placeholder="제목">
     <textarea class="ta" id="qContent" rows="6" placeholder="질문 내용 (고객 개인정보는 입력하지 마세요)"></textarea>
-    <input class="inp" id="qAuthor" placeholder="작성자 (미입력 시 익명)">
+    <input class="inp" id="qAuthor" list="nameList" placeholder="작성자 선택 (검색 가능, ㄱㄴㄷ순)" autocomplete="off">
+    <datalist id="nameList"></datalist>
     <div class="btnRow">
       <button class="btnMain" id="qSubmit" onclick="submitQuestion()">등록</button>
       <button class="btnGhost" onclick="closeModal('qModal')">취소</button>
@@ -504,6 +505,7 @@
   };
 
   var CATEGORIES = ["고객확인(CDD/EDD)","CTR 보고","STR 보고","교육·자격","제도·규정","기타"];
+  var NAMES = ["강지수","강지혜","곽우영","김미소","김상돈","김상우","김재연","김정내","김진영","김찬미","김학영","김현성","박충현","박헌민","송인욱","송현정","오해미","용록중","용선영","유미랑","윤상희","윤여진","윤정윤","이세연","이정민","임현희","장재성","정민기","정세열","조광희","지승하","최진식","홍광석","홍다은","홍순화"].sort(function(a,b){ return a.localeCompare(b, "ko"); });
   var RES_CATEGORIES = ["법령 및 규정","교육자료","유권해석사례집","업무매뉴얼","서식","기타"];
 
   var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -673,6 +675,7 @@
   function initSelects(){
     $("qCat").innerHTML = CATEGORIES.map(function(c){ return "<option>"+esc(c)+"</option>"; }).join("");
     $("rCat").innerHTML = RES_CATEGORIES.map(function(c){ return "<option>"+esc(c)+"</option>"; }).join("");
+    $("nameList").innerHTML = NAMES.map(function(n){ return '<option value="'+esc(n)+'">'; }).join("");
   }
   function setQnaFilter(c){ qnaFilter = c; initChips(); renderQna(); }
   function setResFilter(c){ resFilter = c; initChips(); renderRes(); }
@@ -1114,13 +1117,16 @@
   // ── 동작
   async function submitQuestion(){
     var title = $("qTitle").value.trim(), content = $("qContent").value.trim();
+    var author = $("qAuthor").value.trim();
     if (!title || !content) { toast("제목과 내용을 입력해주세요."); return; }
+    if (!author) { toast("작성자를 선택해주세요."); return; }
+    if (NAMES.indexOf(author) < 0) { toast("목록에 있는 이름을 선택해주세요."); return; }
     $("qSubmit").disabled = true; $("qSubmit").textContent = "등록 중…";
     try {
       var res = await db.from("questions").insert({
         title: title, content: content,
         category: $("qCat").value, branch: user.branch,
-        author: $("qAuthor").value.trim() || "익명"
+        author: author
       });
       if (res.error) throw res.error;
       $("qTitle").value = ""; $("qContent").value = ""; $("qAuthor").value = "";
