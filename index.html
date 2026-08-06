@@ -135,9 +135,60 @@
   .navBtn span { font-size: 19px; line-height: 1; }
   .navBtn.on { color: var(--navy); font-weight: 800; }
 
+  /* ── 토론 채팅 UI */
+  .chatRow { display: flex; gap: 8px; align-items: flex-end; }
+  .chatRow.me { flex-direction: row-reverse; }
+  .chatAvatar {
+    flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%;
+    background: var(--navy); color: #fff; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; font-size: 9.5px; font-weight: 800;
+    line-height: 1.25; letter-spacing: -0.02em;
+  }
+  .chatBubbleWrap { max-width: 100%; display: flex; align-items: flex-end; gap: 5px; }
+  .chatRow.me .chatBubbleWrap { flex-direction: row-reverse; }
+  .chatBubble {
+    max-width: 62vw; padding: 9px 13px; border-radius: 16px; font-size: 14px; line-height: 1.55;
+    white-space: pre-wrap; word-break: break-word; flex-shrink: 1;
+  }
+  .chatRow:not(.me) .chatBubble { background: #fff; border: 1px solid var(--line); border-top-left-radius: 4px; color: var(--ink); }
+  .chatRow.me .chatBubble { background: var(--yellow); color: #3d2f00; border-top-right-radius: 4px; }
+  .chatMeta { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; flex-shrink: 0; }
+  .chatRow.me .chatMeta { align-items: flex-end; }
+  .chatTime { font-size: 10px; color: var(--muted); white-space: nowrap; }
+  .chatActions { display: flex; gap: 8px; }
+  .chatActions button { background: none; border: none; padding: 0; font-size: 10px; color: var(--muted); text-decoration: underline; }
+
+  #chatComposer {
+    position: fixed; left: 0; right: 0; bottom: 56px; z-index: 89;
+    max-width: 860px; margin: 0 auto; background: #fff; border-top: 1px solid var(--line);
+    display: flex; gap: 8px; align-items: flex-end; padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+  }
+  #discussSection.hidden ~ #chatComposer, #discussSection.hidden + #chatComposer { display: none; }
+  #discussDraft {
+    flex: 1; resize: none; border: 1px solid var(--line); border-radius: 18px;
+    padding: 9px 14px; font-size: 14px; max-height: 90px; background: var(--paper); color: var(--ink);
+  }
+  #discussSendBtn {
+    flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; border: none;
+    background: var(--navy); color: #fff; font-size: 16px; padding: 0;
+  }
+
   /* ── 컨트롤/목록 */
   .controls { max-width: 860px; margin: 20px auto 0; padding: 0 20px; }
-  .chipRow { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chipRow {
+    display: flex; gap: 8px; flex-wrap: nowrap; overflow-x: auto; margin-bottom: 6px; padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .chipRow::-webkit-scrollbar { display: none; }
+  .chipScrollWrap { position: relative; }
+  .chipScrollBarTrack {
+    height: 4px; background: var(--line); border-radius: 2px; margin: 0 0 14px;
+    position: relative; overflow: hidden;
+  }
+  .chipScrollBarThumb {
+    position: absolute; top: 0; left: 0; height: 100%; background: var(--cyan); border-radius: 2px;
+  }
+  .chipRow .chip { flex-shrink: 0; }
   .chip {
     background: #fff; border: 1px solid var(--line); border-radius: 999px;
     padding: 6px 13px; font-size: 13px; color: var(--muted);
@@ -368,13 +419,16 @@
   <!-- 질문 게시판 -->
   <div id="qnaSection">
     <div class="controls">
-      <div class="chipRow" id="qnaChips"></div>
+      <div class="chipScrollWrap">
+        <div class="chipRow" id="qnaChips"></div>
+        <div class="chipScrollBarTrack"><div class="chipScrollBarThumb" id="qnaChipsBar"></div></div>
+      </div>
       <div class="ctrlRow">
         <input class="search" id="qnaSearch" placeholder="제목·내용 검색" oninput="renderQna()">
         <select class="sel" id="qnaStatus" onchange="renderQna()">
           <option>전체</option><option>답변대기</option><option>답변완료</option>
         </select>
-        <button class="btnYellow" id="askBtn" onclick="openQModal()">+ 질문하기</button>
+        <button class="btnYellow" id="askBtn" style="width:100%" onclick="openQModal()">+ 질문하기</button>
         <button class="btnGhost hidden" id="bulkModeBtn" onclick="toggleBulkMode()">선택삭제</button>
         <button class="btnDel hidden" id="bulkDeleteBtn" onclick="bulkDeleteQuestions()">삭제 (0)</button>
       </div>
@@ -386,7 +440,7 @@
   <div id="noticeSection" class="hidden">
     <div class="controls">
       <div class="ctrlRow">
-        <button class="btnYellow hidden" id="noticeAddBtn" onclick="resetNForm();openModal('nModal')">+ 공지 등록</button>
+        <button class="btnYellow hidden" id="noticeAddBtn" style="width:100%" onclick="resetNForm();openModal('nModal')">+ 공지 등록</button>
       </div>
     </div>
     <div class="list" id="noticeList"></div>
@@ -403,9 +457,12 @@
   <!-- 자료실 -->
   <div id="resSection" class="hidden">
     <div class="controls">
-      <div class="chipRow" id="resChips"></div>
+      <div class="chipScrollWrap">
+        <div class="chipRow" id="resChips"></div>
+        <div class="chipScrollBarTrack"><div class="chipScrollBarThumb" id="resChipsBar"></div></div>
+      </div>
       <div class="ctrlRow">
-        <button class="btnYellow" onclick="openRModal()">+ 자료 등록</button>
+        <button class="btnYellow" style="width:100%" onclick="openRModal()">+ 자료 등록</button>
       </div>
     </div>
     <div class="list" id="resList"></div>
@@ -413,17 +470,20 @@
 
   <!-- 토론(자유게시판) -->
   <div id="discussSection" class="hidden">
-    <div class="controls">
-      <div class="card" style="padding:12px 14px">
-        <select class="sel" id="discussAuthor" style="width:100%;margin-bottom:8px"></select>
-        <textarea class="ta" id="discussDraft" rows="3" placeholder="지점 직원들과 자유롭게 의견을 나눠보세요" style="margin-bottom:8px"></textarea>
-        <button class="btnMain" style="width:100%" onclick="submitDiscuss()">등록</button>
-      </div>
+    <div class="controls" style="margin:10px 0 4px">
+      <p class="metaText" style="margin:0">전 지점 직원이 함께 보는 자유 토론방입니다. 고객 실명·계좌번호 등 개인정보는 입력하지 마세요.</p>
     </div>
-    <div class="list" id="discussList" style="margin-top:14px"></div>
+    <div id="discussList" style="display:flex;flex-direction:column;gap:12px;padding:0 16px 150px"></div>
   </div>
 
-  <footer style="padding-bottom:100px">
+  <!-- 토론 채팅 입력창 (하단 고정) -->
+  <div id="chatComposer">
+    <select class="sel" id="discussAuthor" style="width:92px;flex-shrink:0;font-size:12.5px;padding:9px 6px"></select>
+    <textarea id="discussDraft" rows="1" placeholder="메시지 입력" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitDiscuss();}"></textarea>
+    <button id="discussSendBtn" onclick="submitDiscuss()" aria-label="전송">➤</button>
+  </div>
+
+  <footer id="pageFooter" style="padding-bottom:100px">
     본 게시판의 내용은 로그인한 모든 지점이 함께 볼 수 있습니다. 고객 실명·계좌번호 등 개인정보는 입력하지 마세요.
   </footer>
 
@@ -593,6 +653,8 @@
   // ── 유틸
   function $(id){ return document.getElementById(id); }
   function shortBranch(name){ return (name || "").replace(/(지점|본점)$/, ""); }
+  function branchInitials(name){ return shortBranch(name).slice(0, 2); }
+  function nameInitials(name){ name = name || ""; return name.length >= 3 ? name.slice(1) : name.slice(-2); }
   function esc(s){
     return String(s == null ? "" : s)
       .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
@@ -603,6 +665,14 @@
     var d = new Date(iso);
     var p = function(n){ return String(n).padStart(2,"0"); };
     return d.getFullYear() + "." + p(d.getMonth()+1) + "." + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+  function fmtChatTime(iso){
+    if (!iso) return "";
+    var d = new Date(iso);
+    var h = d.getHours(), m = String(d.getMinutes()).padStart(2,"0");
+    var ampm = h < 12 ? "오전" : "오후";
+    var h12 = h % 12 === 0 ? 12 : h % 12;
+    return ampm + " " + h12 + ":" + m;
   }
   function toast(msg){
     var t = $("toast"); t.textContent = msg; t.style.display = "block";
@@ -785,6 +855,24 @@
     $("resChips").innerHTML = ["전체"].concat(RES_CATEGORIES).map(function(c){
       return '<button class="chip'+(resFilter===c?" on":"")+'" onclick="setResFilter(\''+esc(c)+'\')">'+esc(c)+'</button>';
     }).join("");
+    setupChipScrollBar($("qnaChips"), $("qnaChipsBar"));
+    setupChipScrollBar($("resChips"), $("resChipsBar"));
+  }
+  function setupChipScrollBar(row, thumb){
+    if (!row || !thumb) return;
+    function update(){
+      var ratio = row.clientWidth / row.scrollWidth;
+      if (ratio >= 0.999) { thumb.parentElement.classList.add("hidden"); return; }
+      thumb.parentElement.classList.remove("hidden");
+      var widthPct = Math.max(ratio * 100, 12);
+      var maxScroll = row.scrollWidth - row.clientWidth;
+      var scrolledPct = maxScroll > 0 ? row.scrollLeft / maxScroll : 0;
+      thumb.style.width = widthPct + "%";
+      thumb.style.left = (scrolledPct * (100 - widthPct)) + "%";
+    }
+    update();
+    if (!row._barBound) { row.addEventListener("scroll", update); row._barBound = true; }
+    setTimeout(update, 200); // 폰트/레이아웃 확정 후 재확인
   }
   function initSelects(){
     $("qCat").innerHTML = CATEGORIES.map(function(c){ return "<option>"+esc(c)+"</option>"; }).join("");
@@ -830,10 +918,11 @@
     $("popularSection").classList.toggle("hidden", t!=="popular");
     $("resSection").classList.toggle("hidden", t!=="res");
     $("discussSection").classList.toggle("hidden", t!=="discuss");
+    $("pageFooter").classList.toggle("hidden", t==="discuss");
     if (t === "notice") renderNotices();
     if (t === "popular") renderPopular();
     if (t === "discuss") renderDiscuss();
-    window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
+    if (t !== "discuss") window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
   }
 
   // ── 데이터 로드
@@ -1211,35 +1300,49 @@
   function renderDiscuss(){
     var el = $("discussList");
     if (discussPosts.length === 0) {
-      el.innerHTML = '<div class="empty">아직 등록된 이야기가 없습니다. 첫 글을 남겨보세요.</div>';
+      el.innerHTML = '<div class="empty">아직 등록된 이야기가 없습니다. 첫 메시지를 남겨보세요.</div>';
       return;
     }
-    el.innerHTML = discussPosts.map(function(d){
-      var canManage = isAdmin() || d.branch === user.branch;
+    var ordered = discussPosts.slice().reverse(); // 채팅처럼 오래된 순 → 최신이 아래
+    el.innerHTML = ordered.map(function(d){
+      var isMe = d.branch === user.branch;
+      var canManage = isAdmin() || isMe;
       var editing = !!discussEditMode[d.id];
-      var html = '<article class="card" style="padding:12px 14px">' +
-        '<div class="cardMeta"><span class="catTag">'+esc(d.branch)+'</span>' +
-        '<span class="metaText">'+esc(d.author)+' · '+fmt(d.created_at)+'</span></div>';
+      var rowCls = "chatRow" + (isMe ? " me" : "");
+
       if (editing) {
         var opts = NAMES.map(function(n){ return '<option'+(n===d.author?' selected':'')+'>'+esc(n)+'</option>'; }).join("");
-        html += '<select class="sel" id="dEditAuthor_'+esc(d.id)+'" style="width:100%;margin:8px 0">'+opts+'</select>' +
-          '<textarea class="ta" id="dEditText_'+esc(d.id)+'" rows="3" style="margin-bottom:8px">'+esc(d.text)+'</textarea>' +
-          '<div class="btnRow">' +
-            '<button class="btnMain" onclick="saveDiscussEdit(\''+esc(d.id)+'\')">저장</button>' +
-            '<button class="btnGhost" onclick="cancelDiscussEdit(\''+esc(d.id)+'\')">취소</button>' +
-          '</div>';
-      } else {
-        html += '<p class="qText" style="margin-top:8px">'+esc(d.text)+'</p>';
-        if (canManage) {
-          html += '<div class="btnRow" style="margin-top:8px">' +
-            '<button class="btnGhost" onclick="editDiscuss(\''+esc(d.id)+'\')">수정</button>' +
-            '<button class="btnDel" onclick="deleteDiscuss(\''+esc(d.id)+'\')">삭제</button>' +
-          '</div>';
-        }
+        return '<div class="'+rowCls+'"><div class="chatBubbleWrap" style="max-width:88%;width:100%">' +
+          '<div class="card" style="padding:10px;width:100%">' +
+            '<select class="sel" id="dEditAuthor_'+esc(d.id)+'" style="width:100%;margin-bottom:6px;font-size:12.5px">'+opts+'</select>' +
+            '<textarea class="ta" id="dEditText_'+esc(d.id)+'" rows="2" style="margin-bottom:6px;font-size:13px">'+esc(d.text)+'</textarea>' +
+            '<div class="btnRow">' +
+              '<button class="btnMain" style="padding:6px 12px;font-size:12px" onclick="saveDiscussEdit(\''+esc(d.id)+'\')">저장</button>' +
+              '<button class="btnGhost" style="padding:6px 12px;font-size:12px" onclick="cancelDiscussEdit(\''+esc(d.id)+'\')">취소</button>' +
+            '</div>' +
+          '</div>' +
+        '</div></div>';
       }
-      html += '</article>';
-      return html;
+
+      var actions = canManage
+        ? '<div class="chatActions">' +
+            '<button onclick="editDiscuss(\''+esc(d.id)+'\')">수정</button>' +
+            '<button onclick="deleteDiscuss(\''+esc(d.id)+'\')">삭제</button>' +
+          '</div>'
+        : '';
+
+      var avatar = isMe ? '' :
+        '<div class="chatAvatar"><span>'+esc(branchInitials(d.branch))+'</span><span>'+esc(nameInitials(d.author))+'</span></div>';
+
+      return '<div class="'+rowCls+'">' +
+        avatar +
+        '<div class="chatBubbleWrap">' +
+          '<div class="chatBubble">'+esc(d.text)+'</div>' +
+          '<div class="chatMeta"><span class="chatTime">'+fmtChatTime(d.created_at)+'</span>'+actions+'</div>' +
+        '</div>' +
+      '</div>';
     }).join("");
+    el.scrollIntoView && el.lastElementChild && el.lastElementChild.scrollIntoView({ block: "end" });
   }
 
   async function submitDiscuss(){
