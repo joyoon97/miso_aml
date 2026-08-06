@@ -524,6 +524,18 @@
   </div>
 </div>
 
+<!-- 공용 상세보기 바텀시트 (질문/공지/자료 공통) -->
+<div class="overlay hidden" id="detailModal" onclick="if(event.target===this)closeDetail()">
+  <div class="modal">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px">
+      <h2 class="modalTitle" id="detailTitle" style="margin:0;flex:1;min-width:0">상세</h2>
+      <button onclick="closeDetail()" aria-label="닫기" style="flex-shrink:0;width:28px;height:28px;border-radius:50%;
+        background:var(--paper);border:none;color:var(--muted);font-size:15px;line-height:1">✕</button>
+    </div>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- 앱 설치 안내 배너 -->
@@ -575,7 +587,7 @@
   function toggleAnswerEdit(id, cancel){
     if (cancel) { delete answerEditMode[id]; delete answerDrafts[id]; }
     else answerEditMode[id] = true;
-    renderQna();
+    refreshOpenDetail();
   }
 
   // ── 유틸
@@ -597,6 +609,35 @@
     clearTimeout(t._tm); t._tm = setTimeout(function(){ t.style.display = "none"; }, msg && msg.length > 30 ? 5000 : 2500);
   }
   function openModal(id){ $(id).classList.remove("hidden"); }
+
+  // ── 공용 상세보기 바텀시트 (질문/공지/자료)
+  var openQuestionId = null, openResourceId = null, openNoticeId = null;
+  function openDetail(title, bodyHtml){
+    $("detailTitle").textContent = title;
+    $("detailBody").innerHTML = bodyHtml;
+    openModal("detailModal");
+  }
+  function closeDetail(){
+    openQuestionId = null; openResourceId = null; openNoticeId = null;
+    closeModal("detailModal");
+  }
+  function refreshOpenDetail(){
+    if (openQuestionId) {
+      var q = questions.find(function(x){ return x.id === openQuestionId; });
+      if (q) { $("detailTitle").textContent = q.title; $("detailBody").innerHTML = buildQuestionDetailBody(q); }
+      else closeDetail();
+    }
+    if (openResourceId) {
+      var r = resources.find(function(x){ return x.id === openResourceId; });
+      if (r) { $("detailTitle").textContent = r.title; $("detailBody").innerHTML = buildResourceDetailBody(r); }
+      else closeDetail();
+    }
+    if (openNoticeId) {
+      var n = notices.find(function(x){ return x.id === openNoticeId; });
+      if (n) { $("detailTitle").textContent = n.title; $("detailBody").innerHTML = buildNoticeDetailBody(n); }
+      else closeDetail();
+    }
+  }
   function openQModal(){
     if (qnaFilter !== "전체" && CATEGORIES.indexOf(qnaFilter) >= 0) $("qCat").value = qnaFilter;
     else $("qCat").selectedIndex = 0;
@@ -631,6 +672,7 @@
   function openEditResource(id){
     var r = resources.find(function(x){ return x.id === id; });
     if (!r) return;
+    closeDetail();
     editingResourceId = id;
     $("rModalTitle").textContent = "자료 수정";
     $("rSubmit").textContent = "수정 저장";
@@ -809,6 +851,7 @@
       renderQna(); renderRes(); renderPending(); renderPopular(); updateBellBadge();
       if (!$("noticeSection").classList.contains("hidden")) renderNotices();
       if (!$("discussSection").classList.contains("hidden")) renderDiscuss();
+      refreshOpenDetail();
     } catch (e) {
       toast("데이터를 불러오지 못했습니다. 연결 정보를 확인해주세요.");
       $("qnaList").innerHTML = '<div class="empty">데이터를 불러오지 못했습니다.</div>';
@@ -847,14 +890,13 @@
       return;
     }
     el.innerHTML = list.map(function(q){
-      var open = expandedId === q.id;
       var lockMark = (q.category === "STR 보고") ? "🔒 " : "";
       var checkbox = (isAdmin() && bulkMode)
         ? '<input type="checkbox" onclick="event.stopPropagation();toggleBulkSelect(\''+esc(q.id)+'\',this.checked)" ' +
           (bulkSelected[q.id] ? 'checked' : '') + ' style="width:20px;height:20px;flex-shrink:0;margin-right:2px">'
         : '';
-      var html = '<article class="card" id="qna_'+esc(q.id)+'">' +
-        '<button class="cardHead" onclick="toggleQ(\''+esc(q.id)+'\')">' +
+      return '<article class="card" id="qna_'+esc(q.id)+'">' +
+        '<button class="cardHead" onclick="openQuestionDetail(\''+esc(q.id)+'\')">' +
           checkbox +
           '<div style="flex:1;min-width:0">' +
             '<div class="cardMeta"><span class="catTag">'+lockMark+esc(q.category)+'</span>' +
@@ -862,55 +904,62 @@
             '<div class="cardTitle">'+esc(q.title)+'</div>' +
           '</div>' +
           (q.answer ? '<span class="stampDone">답변완료</span>' : '<span class="stampWait">답변대기</span>') +
-        '</button>';
-      if (open) {
-        html += '<div class="cardBody"><p class="qText">'+esc(q.content)+'</p>' + renderFileChips(q.images);
-        if (q.answer) {
-          if (answerLocked(q)) {
-            html += '<div class="answerBox"><div class="answerHead">관리자 답변 🔒</div>' +
-                    '<p class="qText" style="color:var(--muted)">STR 보고 답변은 누설 금지 대상입니다. 질문을 등록한 지점만 계정 비밀번호 확인 후 열람할 수 있습니다.</p>' +
-                    '<div style="margin-top:10px"><button class="btnMain" onclick="unlockAnswer(\''+esc(q.id)+'\')">답변 보기</button></div></div>';
-          } else {
-            html += '<div class="answerBox"><div class="answerHead">관리자 답변 <span class="metaText">'+fmt(q.answered_at)+'</span></div>' +
-                    '<p class="qText">'+esc(q.answer)+'</p>' + renderFileChips(q.answer_files) + '</div>';
-          }
-        }
-        if (isAdmin()) {
-          var showForm = !q.answer || answerEditMode[q.id];
-          if (q.answer && !showForm) {
-            html += '<div class="btnRow" style="margin-top:10px">' +
-              '<button class="btnGhost" onclick="toggleAnswerEdit(\''+esc(q.id)+'\')">답변 수정</button>' +
-              '<button class="btnDel" onclick="deleteQuestion(\''+esc(q.id)+'\')">질문 삭제</button>' +
-            '</div>';
-          } else {
-            var draft = answerDrafts[q.id] != null ? answerDrafts[q.id] : (q.answer || "");
-            var existingFiles = (q.answer_files && q.answer_files.length)
-              ? '<p style="margin:6px 0 0;font-size:11.5px;color:var(--muted)">기존 첨부 ' + q.answer_files.length + '건 (새로 첨부하면 교체됩니다)</p>' : "";
-            html += '<div style="margin-top:14px">' +
-              '<textarea class="ta" rows="4" id="ans_'+esc(q.id)+'" placeholder="'+(q.answer?"답변 수정 내용 입력":"답변 입력")+'" oninput="answerDrafts[\''+esc(q.id)+'\']=this.value">'+esc(draft)+'</textarea>' +
-              '<label style="display:block;font-size:12.5px;font-weight:700;color:var(--navy);margin-bottom:4px">사진 촬영 또는 자료 첨부 (선택, 최대 3개)</label>' +
-              '<input class="inp" type="file" id="ansFile_'+esc(q.id)+'" accept="image/*,.pdf,.hwp,.hwpx,.doc,.docx,.ppt,.pptx" capture="environment" multiple style="padding:9px" onchange="previewAnsFiles(\''+esc(q.id)+'\')">' +
-              existingFiles +
-              '<div id="ansFilePreview_'+esc(q.id)+'" style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"></div>' +
-              '<div class="btnRow">' +
-                '<button class="btnMain" onclick="submitAnswer(\''+esc(q.id)+'\')">'+(q.answer?"수정 저장":"답변 등록")+'</button>' +
-                (q.answer
-                  ? '<button class="btnGhost" onclick="toggleAnswerEdit(\''+esc(q.id)+'\', true)">취소</button>'
-                  : '<button class="btnDel" onclick="deleteQuestion(\''+esc(q.id)+'\')">질문 삭제</button>') +
-              '</div></div>';
-          }
-        }
-        html += '</div>';
-      }
-      return html + '</article>';
+        '</button></article>';
     }).join("");
   }
-  function toggleQ(id){
-    var opening = expandedId !== id;
-    expandedId = opening ? id : null;
-    renderQna();
-    if (opening) bumpView(id);
+
+  function openQuestionDetail(id){
+    var q = questions.find(function(x){ return x.id === id; });
+    if (!q) return;
+    openQuestionId = id;
+    openDetail(q.title, buildQuestionDetailBody(q));
+    bumpView(id);
   }
+
+  function buildQuestionDetailBody(q){
+    var lockMark = (q.category === "STR 보고") ? "🔒 " : "";
+    var html = '<div class="cardMeta"><span class="catTag">'+lockMark+esc(q.category)+'</span>' +
+      '<span class="metaText">'+esc(q.branch)+' · '+esc(q.author)+' · '+fmt(q.created_at)+'</span></div>' +
+      (q.answer ? '<span class="stampDone" style="margin-bottom:10px;display:inline-block">답변완료</span>' : '<span class="stampWait" style="margin-bottom:10px;display:inline-block">답변대기</span>') +
+      '<p class="qText" style="margin-top:10px">'+esc(q.content)+'</p>' + renderFileChips(q.images);
+    if (q.answer) {
+      if (answerLocked(q)) {
+        html += '<div class="answerBox"><div class="answerHead">관리자 답변 🔒</div>' +
+                '<p class="qText" style="color:var(--muted)">STR 보고 답변은 누설 금지 대상입니다. 질문을 등록한 지점만 계정 비밀번호 확인 후 열람할 수 있습니다.</p>' +
+                '<div style="margin-top:10px"><button class="btnMain" onclick="unlockAnswer(\''+esc(q.id)+'\')">답변 보기</button></div></div>';
+      } else {
+        html += '<div class="answerBox"><div class="answerHead">관리자 답변 <span class="metaText">'+fmt(q.answered_at)+'</span></div>' +
+                '<p class="qText">'+esc(q.answer)+'</p>' + renderFileChips(q.answer_files) + '</div>';
+      }
+    }
+    if (isAdmin()) {
+      var showForm = !q.answer || answerEditMode[q.id];
+      if (q.answer && !showForm) {
+        html += '<div class="btnRow" style="margin-top:10px">' +
+          '<button class="btnGhost" onclick="toggleAnswerEdit(\''+esc(q.id)+'\')">답변 수정</button>' +
+          '<button class="btnDel" onclick="deleteQuestion(\''+esc(q.id)+'\')">질문 삭제</button>' +
+        '</div>';
+      } else {
+        var draft = answerDrafts[q.id] != null ? answerDrafts[q.id] : (q.answer || "");
+        var existingFiles = (q.answer_files && q.answer_files.length)
+          ? '<p style="margin:6px 0 0;font-size:11.5px;color:var(--muted)">기존 첨부 ' + q.answer_files.length + '건 (새로 첨부하면 교체됩니다)</p>' : "";
+        html += '<div style="margin-top:14px">' +
+          '<textarea class="ta" rows="4" id="ans_'+esc(q.id)+'" placeholder="'+(q.answer?"답변 수정 내용 입력":"답변 입력")+'" oninput="answerDrafts[\''+esc(q.id)+'\']=this.value">'+esc(draft)+'</textarea>' +
+          '<label style="display:block;font-size:12.5px;font-weight:700;color:var(--navy);margin-bottom:4px">사진 촬영 또는 자료 첨부 (선택, 최대 3개)</label>' +
+          '<input class="inp" type="file" id="ansFile_'+esc(q.id)+'" accept="image/*,.pdf,.hwp,.hwpx,.doc,.docx,.ppt,.pptx" capture="environment" multiple style="padding:9px" onchange="previewAnsFiles(\''+esc(q.id)+'\')">' +
+          existingFiles +
+          '<div id="ansFilePreview_'+esc(q.id)+'" style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"></div>' +
+          '<div class="btnRow">' +
+            '<button class="btnMain" onclick="submitAnswer(\''+esc(q.id)+'\')">'+(q.answer?"수정 저장":"답변 등록")+'</button>' +
+            (q.answer
+              ? '<button class="btnGhost" onclick="toggleAnswerEdit(\''+esc(q.id)+'\', true)">취소</button>'
+              : '<button class="btnDel" onclick="deleteQuestion(\''+esc(q.id)+'\')">질문 삭제</button>') +
+          '</div></div>';
+      }
+    }
+    return html;
+  }
+  function toggleQ(id){ openQuestionDetail(id); }
 
   async function bumpView(id){
     var q = questions.find(function(x){ return x.id === id; });
@@ -936,7 +985,7 @@
     }
     var pw = prompt("STR 보고 답변은 누설 금지 대상입니다.\n본인 지점 계정의 비밀번호를 입력해주세요.");
     if (pw === null) return;
-    if (ACCOUNTS[user.id] && ACCOUNTS[user.id].pw === pw) { unlockedIds[id] = true; renderQna(); }
+    if (ACCOUNTS[user.id] && ACCOUNTS[user.id].pw === pw) { unlockedIds[id] = true; refreshOpenDetail(); }
     else toast("비밀번호가 일치하지 않습니다.");
   }
 
@@ -951,13 +1000,12 @@
     }
     list.innerHTML = topQ.map(function(q, i){
       var rankCls = "top" + (i+1);
-      return '<div class="rankRow" style="cursor:pointer" onclick="goToQuestion(\''+esc(q.id)+'\')">' +
+      return '<div class="rankRow" style="cursor:pointer" onclick="openQuestionDetail(\''+esc(q.id)+'\')">' +
         '<div class="rankNo ' + rankCls + '">TOP' + (i+1) + '</div>' +
         '<div class="rankBody">' +
           '<div class="rankTitle">' + esc(q.title) + '</div>' +
           '<div class="rankSub">' + esc(q.category) + ' · ' + esc(q.branch) + '</div>' +
         '</div>' +
-        '<div class="rankCount">' + (q.view_count||0) + '회</div>' +
       '</div>';
     }).join("");
   }
@@ -974,7 +1022,7 @@
           icon: "🆕",
           text: "새 질문",
           sub: "[" + q.branch + "] " + q.title,
-          go: function(id){ return function(){ closeModal("historyModal"); switchTab("qna"); goToQuestion(id); }; }(q.id)
+          go: function(id){ return function(){ closeModal("historyModal"); openQuestionDetail(id); }; }(q.id)
         });
       });
     } else {
@@ -985,7 +1033,7 @@
             icon: "✅",
             text: "답변 등록",
             sub: q.title,
-            go: function(id){ return function(){ closeModal("historyModal"); switchTab("qna"); goToQuestion(id); }; }(q.id)
+            go: function(id){ return function(){ closeModal("historyModal"); openQuestionDetail(id); }; }(q.id)
           });
         }
       });
@@ -995,7 +1043,7 @@
           icon: "📢",
           text: "새 공지사항",
           sub: n.title,
-          go: function(){ closeModal("historyModal"); switchTab("notice"); }
+          go: function(id){ return function(){ closeModal("historyModal"); switchTab("notice"); openNoticeDetail(id); }; }(n.id)
         });
       });
     }
@@ -1059,19 +1107,32 @@
   var historyActions = [];
 
   function goToQuestion(id){
-    qnaFilter = "전체"; initChips();
-    $("qnaSearch").value = ""; $("qnaStatus").value = "전체";
-    expandedId = null;
-    renderQna();
-    toggleQ(id);
-    document.getElementById("qna_"+id) && document.getElementById("qna_"+id).scrollIntoView({ behavior: "smooth", block: "center" });
+    openQuestionDetail(id);
   }
 
   // ── 공지사항
   var expandedNoticeId = null;
   var editingNoticeId = null;
 
-  function toggleNotice(id){ expandedNoticeId = (expandedNoticeId === id) ? null : id; renderNotices(); }
+  function openNoticeDetail(id){
+    var n = notices.find(function(x){ return x.id === id; });
+    if (!n) return;
+    openNoticeId = id;
+    openDetail(n.title, buildNoticeDetailBody(n));
+  }
+
+  function buildNoticeDetailBody(n){
+    var html = '<div class="cardMeta"><span class="metaText">' + fmt(n.created_at) + '</span></div>' +
+      '<p class="qText" style="margin-top:10px">' + esc(n.content) + '</p>';
+    if (isAdmin()) {
+      html += '<div class="btnRow" style="margin-top:12px">' +
+        '<button class="btnGhost" onclick="openEditNotice(\''+esc(n.id)+'\')">수정</button>' +
+        '<button class="btnDel" onclick="deleteNotice(\''+esc(n.id)+'\')">삭제</button>' +
+      '</div>';
+    }
+    return html;
+  }
+  function toggleNotice(id){ openNoticeDetail(id); }
 
   function renderNotices(){
     $("noticeAddBtn").classList.toggle("hidden", !isAdmin());
@@ -1081,27 +1142,13 @@
       return;
     }
     el.innerHTML = notices.map(function(n){
-      var open = expandedNoticeId === n.id;
-      var html = '<article class="card">' +
-        '<button class="cardHead" onclick="toggleNotice(\''+esc(n.id)+'\')">' +
+      return '<article class="card">' +
+        '<button class="cardHead" onclick="openNoticeDetail(\''+esc(n.id)+'\')">' +
           '<div style="flex:1;min-width:0">' +
             '<div class="cardMeta"><span class="metaText">' + fmt(n.created_at) + '</span></div>' +
             '<div class="cardTitle">' + esc(n.title) + '</div>' +
           '</div>' +
-        '</button>';
-      if (open) {
-        html += '<div class="cardBody">' +
-          '<p class="qText">' + esc(n.content) + '</p>';
-        if (isAdmin()) {
-          html += '<div class="btnRow" style="margin-top:12px">' +
-            '<button class="btnGhost" onclick="openEditNotice(\''+esc(n.id)+'\')">수정</button>' +
-            '<button class="btnDel" onclick="deleteNotice(\''+esc(n.id)+'\')">삭제</button>' +
-          '</div>';
-        }
-        html += '</div>';
-      }
-      html += '</article>';
-      return html;
+        '</button></article>';
     }).join("");
   }
 
@@ -1115,6 +1162,7 @@
   function openEditNotice(id){
     var n = notices.find(function(x){ return x.id === id; });
     if (!n) return;
+    closeDetail();
     editingNoticeId = id;
     $("nModalTitle").textContent = "공지 수정";
     $("nSubmit").textContent = "수정 저장";
@@ -1298,7 +1346,38 @@
     return { url: link, note: "" };
   }
 
-  function toggleRes(id){ expandedResId = (expandedResId === id) ? null : id; renderRes(); }
+  function openResourceDetail(id){
+    var r = resources.find(function(x){ return x.id === id; });
+    if (!r) return;
+    openResourceId = id;
+    openDetail(r.title, buildResourceDetailBody(r));
+  }
+
+  function buildResourceDetailBody(r){
+    var canDel = isAdmin() || r.branch === user.branch;
+    var isLaw = r.category === "법령 및 규정";
+    var prevFile = resolvePreviewUrl(r.file_link);
+    var html = '<div class="cardMeta"><span class="catTag">'+esc(r.category)+'</span>' +
+      '<span class="metaText">'+esc(r.branch)+' · '+fmt(r.created_at)+'</span></div>';
+    if (r.descr) html += '<p class="qText" style="margin:10px 0 12px">'+esc(r.descr)+'</p>';
+    if (r.file_link && prevFile.note) html += '<p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">'+esc(prevFile.note)+'</p>';
+    html += '<div class="btnRow" style="flex-wrap:wrap;margin-top:10px">';
+    if (r.file_link) {
+      var fileLabel = isLaw ? "PDF 바로보기" : "자료 열기";
+      html += '<a class="btnMain" style="text-decoration:none;display:inline-block" href="'+esc(prevFile.url)+'" target="_blank" rel="noreferrer">'+fileLabel+'</a>';
+    }
+    if (r.link) {
+      var linkLabel = isLaw ? "원문 들어가기" : "관련 링크";
+      html += '<a class="'+(r.file_link ? "btnGhost" : "btnMain")+'" style="text-decoration:none;display:inline-block" href="'+esc(r.link)+'" target="_blank" rel="noreferrer">'+linkLabel+'</a>';
+    }
+    if (canDel) {
+      html += '<button class="btnGhost" onclick="openEditResource(\''+esc(r.id)+'\')">수정</button>';
+      html += '<button class="btnDel" onclick="deleteResource(\''+esc(r.id)+'\')">삭제</button>';
+    }
+    html += '</div>';
+    return html;
+  }
+  function toggleRes(id){ openResourceDetail(id); }
 
   function renderRes(){
     var list = resources.filter(function(r){
@@ -1312,41 +1391,14 @@
       return;
     }
     el.innerHTML = list.map(function(r){
-      var open = expandedResId === r.id;
-      var canDel = isAdmin() || r.branch === user.branch;
-      var isLaw = r.category === "법령 및 규정";
-      var prevFile = resolvePreviewUrl(r.file_link);
-
-      var html = '<article class="card">' +
-        '<button class="cardHead" onclick="toggleRes(\''+esc(r.id)+'\')">' +
+      return '<article class="card">' +
+        '<button class="cardHead" onclick="openResourceDetail(\''+esc(r.id)+'\')">' +
           '<div style="flex:1;min-width:0">' +
             '<div class="cardMeta"><span class="catTag">'+esc(r.category)+'</span>' +
             '<span class="metaText">'+esc(r.branch)+' · '+fmt(r.created_at)+'</span></div>' +
             '<div class="cardTitle">'+esc(r.title)+'</div>' +
           '</div>' +
-        '</button>';
-
-      if (open) {
-        html += '<div class="cardBody">';
-        if (r.descr) html += '<p class="qText" style="margin-bottom:12px">'+esc(r.descr)+'</p>';
-        if (r.file_link && prevFile.note) html += '<p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">'+esc(prevFile.note)+'</p>';
-        html += '<div class="btnRow" style="flex-wrap:wrap">';
-        if (r.file_link) {
-          var fileLabel = isLaw ? "PDF 바로보기" : "자료 열기";
-          html += '<a class="btnMain" style="text-decoration:none;display:inline-block" href="'+esc(prevFile.url)+'" target="_blank" rel="noreferrer">'+fileLabel+'</a>';
-        }
-        if (r.link) {
-          var linkLabel = isLaw ? "원문 들어가기" : "관련 링크";
-          html += '<a class="'+(r.file_link ? "btnGhost" : "btnMain")+'" style="text-decoration:none;display:inline-block" href="'+esc(r.link)+'" target="_blank" rel="noreferrer">'+linkLabel+'</a>';
-        }
-        if (canDel) {
-          html += '<button class="btnGhost" onclick="openEditResource(\''+esc(r.id)+'\')">수정</button>';
-          html += '<button class="btnDel" onclick="deleteResource(\''+esc(r.id)+'\')">삭제</button>';
-        }
-        html += '</div></div>';
-      }
-      html += '</article>';
-      return html;
+        '</button></article>';
     }).join("");
   }
 
