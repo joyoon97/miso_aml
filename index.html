@@ -554,7 +554,7 @@
   }
   function toast(msg){
     var t = $("toast"); t.textContent = msg; t.style.display = "block";
-    clearTimeout(t._tm); t._tm = setTimeout(function(){ t.style.display = "none"; }, 2500);
+    clearTimeout(t._tm); t._tm = setTimeout(function(){ t.style.display = "none"; }, msg && msg.length > 30 ? 5000 : 2500);
   }
   function openModal(id){ $(id).classList.remove("hidden"); }
   function openQModal(){
@@ -1090,7 +1090,7 @@
       closeModal("nModal"); toast(isEdit ? "공지가 수정되었습니다." : "공지가 등록되었습니다.");
       await loadData();
     } catch(e) {
-      toast(isEdit ? "수정에 실패했습니다." : "등록에 실패했습니다.");
+      toast((isEdit ? "수정 실패: " : "등록 실패: ") + (e && e.message ? e.message : String(e)));
     } finally {
       $("nSubmit").disabled = false;
       $("nSubmit").textContent = editingNoticeId ? "수정 저장" : "등록";
@@ -1257,7 +1257,7 @@
       closeModal("qModal"); toast("질문이 등록되었습니다.");
       await loadData();
     } catch (e) {
-      toast("등록에 실패했습니다. 다시 시도해주세요.");
+      toast("등록 실패: " + (e && e.message ? e.message : String(e)));
     } finally {
       $("qSubmit").disabled = false; $("qSubmit").textContent = "등록";
     }
@@ -1330,7 +1330,7 @@
       toast("답변이 등록되었습니다.");
       await loadData();
     } catch (e) {
-      toast("저장에 실패했습니다. 다시 시도해주세요.");
+      toast("저장 실패: " + (e && e.message ? e.message : String(e)));
     }
   }
 
@@ -1383,7 +1383,7 @@
       closeModal("rModal"); toast(isEdit ? "자료가 수정되었습니다." : "자료가 등록되었습니다.");
       await loadData();
     } catch (e) {
-      toast(isEdit ? "수정에 실패했습니다. 다시 시도해주세요." : "등록에 실패했습니다. 다시 시도해주세요.");
+      toast((isEdit ? "수정 실패: " : "등록 실패: ") + (e && e.message ? e.message : String(e)));
     } finally {
       $("rSubmit").disabled = false;
       $("rSubmit").textContent = editingResourceId ? "수정 저장" : "등록";
