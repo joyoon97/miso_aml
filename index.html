@@ -119,6 +119,22 @@
     font-weight: 700; text-align: center; padding: 7px 12px;
   }
 
+  /* ── 하단 고정 네비게이션 */
+  #bottomNav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
+    max-width: 860px; margin: 0 auto;
+    background: #fff; border-top: 1px solid var(--line);
+    display: flex; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 16px rgba(27,42,74,.08);
+  }
+  .navBtn {
+    flex: 1; background: none; border: none; display: flex; flex-direction: column;
+    align-items: center; gap: 2px; padding: 6px 2px; color: var(--muted);
+    font-size: 10.5px; font-weight: 600;
+  }
+  .navBtn span { font-size: 19px; line-height: 1; }
+  .navBtn.on { color: var(--navy); font-weight: 800; }
+
   /* ── 컨트롤/목록 */
   .controls { max-width: 860px; margin: 20px auto 0; padding: 0 20px; }
   .chipRow { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -209,15 +225,26 @@
     font-size: 12px; color: var(--muted); line-height: 1.6;
   }
 
-  /* ── 모달/토스트 */
+  /* ── 모달/토스트 (바텀시트) */
+  @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  @keyframes sheetFade { from { opacity: 0; } to { opacity: 1; } }
   .overlay {
     position: fixed; inset: 0; background: rgba(27,42,74,.45);
-    display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 100;
+    display: flex; align-items: flex-end; justify-content: center; z-index: 100;
+    animation: sheetFade .15s ease;
   }
   .modal {
-    background: #fff; border-radius: 12px; padding: 22px 22px 20px;
-    width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto;
+    background: #fff; border-radius: 20px 20px 0 0; padding: 0 20px 20px;
+    width: 100%; max-width: 520px; max-height: 88vh; overflow-y: auto;
+    animation: sheetUp .22s cubic-bezier(.2,.8,.2,1);
+    box-shadow: 0 -10px 30px rgba(0,0,0,.15);
   }
+  .modal::before {
+    content: ""; display: block; width: 40px; height: 4px;
+    background: var(--line); border-radius: 2px; margin: 10px auto 14px;
+    position: sticky; top: 0;
+  }
+  @media (prefers-reduced-motion: reduce) { .modal, .overlay { animation: none; } }
   .modalTitle { margin: 0 0 14px; font-size: 18px; font-weight: 800; color: var(--navy); }
   .formRow { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
   .branchFixed {
@@ -332,15 +359,7 @@
       <div>
         <div class="eyebrow"><img class="ciLogo" src="icons/logo.png" alt="">미소신용협동조합 · 평생어부바 🐷</div>
         <h1>자금세탁방지 Q&A</h1>
-        <p class="subText">AML 업무 중 궁금한 점을 올려주세요. 관리자가 확인 후 답변드립니다.</p>
-      </div>
-    </div>
-    <div class="tabBar">
-      <div class="tabInner">
-        <button class="tabBtn on" id="tabQna" onclick="switchTab('qna')">질문 게시판</button>
-        <button class="tabBtn" id="tabNotice" onclick="switchTab('notice')">공지사항</button>
-        <button class="tabBtn" id="tabRes" onclick="switchTab('res')">자료실</button>
-        <button class="tabBtn" id="tabPopular" onclick="switchTab('popular')">자주 묻는 질문</button>
+        <p class="subText" id="roleLabelText">계정으로 로그인됨</p>
       </div>
     </div>
     <div class="pendingBar hidden" id="pendingBar"></div>
@@ -392,9 +411,30 @@
     <div class="list" id="resList"></div>
   </div>
 
-  <footer>
+  <!-- 토론(자유게시판) -->
+  <div id="discussSection" class="hidden">
+    <div class="controls">
+      <div class="card" style="padding:12px 14px">
+        <select class="sel" id="discussAuthor" style="width:100%;margin-bottom:8px"></select>
+        <textarea class="ta" id="discussDraft" rows="3" placeholder="지점 직원들과 자유롭게 의견을 나눠보세요" style="margin-bottom:8px"></textarea>
+        <button class="btnMain" style="width:100%" onclick="submitDiscuss()">등록</button>
+      </div>
+    </div>
+    <div class="list" id="discussList" style="margin-top:14px"></div>
+  </div>
+
+  <footer style="padding-bottom:100px">
     본 게시판의 내용은 로그인한 모든 지점이 함께 볼 수 있습니다. 고객 실명·계좌번호 등 개인정보는 입력하지 마세요.
   </footer>
+
+  <!-- 하단 고정 네비게이션 -->
+  <nav id="bottomNav">
+    <button class="navBtn on" id="navQna" onclick="switchTab('qna')"><span>📋</span>질문</button>
+    <button class="navBtn" id="navNotice" onclick="switchTab('notice')"><span>📢</span>공지</button>
+    <button class="navBtn" id="navRes" onclick="switchTab('res')"><span>📁</span>자료</button>
+    <button class="navBtn" id="navPopular" onclick="switchTab('popular')"><span>⭐</span>FAQ</button>
+    <button class="navBtn" id="navDiscuss" onclick="switchTab('discuss')"><span>💬</span>토론</button>
+  </nav>
 </div>
 
 <!-- 질문 작성 모달 -->
@@ -527,7 +567,7 @@
   var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   var user = null;
-  var questions = [], resources = [], notices = [];
+  var questions = [], resources = [], notices = [], discussPosts = [];
   var qnaFilter = "전체", resFilter = "전체";
   var expandedId = null;
   var answerDrafts = {};
@@ -613,6 +653,7 @@
     $("loginPage").classList.add("hidden");
     $("mainPage").classList.remove("hidden");
     $("userTag").textContent = shortBranch(user.branch);
+    $("roleLabelText").textContent = user.branch + " 계정으로 로그인됨";
     $("qBranch").textContent = user.branch;
     $("rBranch").textContent = user.branch;
     $("askBtn").classList.toggle("hidden", isAdmin());
@@ -706,6 +747,7 @@
   function initSelects(){
     $("qCat").innerHTML = CATEGORIES.map(function(c){ return "<option>"+esc(c)+"</option>"; }).join("");
     $("rCat").innerHTML = RES_CATEGORIES.map(function(c){ return "<option>"+esc(c)+"</option>"; }).join("");
+    $("discussAuthor").innerHTML = NAMES.map(function(n){ return "<option>"+esc(n)+"</option>"; }).join("");
   }
 
   // ── 작성자 검색 드롭다운 (아이폰 datalist 미지원 대응)
@@ -736,16 +778,20 @@
   function setResFilter(c){ resFilter = c; initChips(); renderRes(); }
 
   function switchTab(t){
-    $("tabQna").classList.toggle("on", t==="qna");
-    $("tabNotice").classList.toggle("on", t==="notice");
-    $("tabPopular").classList.toggle("on", t==="popular");
-    $("tabRes").classList.toggle("on", t==="res");
+    $("navQna").classList.toggle("on", t==="qna");
+    $("navNotice").classList.toggle("on", t==="notice");
+    $("navRes").classList.toggle("on", t==="res");
+    $("navPopular").classList.toggle("on", t==="popular");
+    $("navDiscuss").classList.toggle("on", t==="discuss");
     $("qnaSection").classList.toggle("hidden", t!=="qna");
     $("noticeSection").classList.toggle("hidden", t!=="notice");
     $("popularSection").classList.toggle("hidden", t!=="popular");
     $("resSection").classList.toggle("hidden", t!=="res");
+    $("discussSection").classList.toggle("hidden", t!=="discuss");
     if (t === "notice") renderNotices();
     if (t === "popular") renderPopular();
+    if (t === "discuss") renderDiscuss();
+    window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
   }
 
   // ── 데이터 로드
@@ -754,12 +800,15 @@
       var q = await db.from("questions").select("*").order("created_at", { ascending: false });
       var r = await db.from("resources").select("*").order("created_at", { ascending: false });
       var n = await db.from("notices").select("*").order("created_at", { ascending: false });
+      var d = await db.from("discuss").select("*").order("created_at", { ascending: false });
       if (q.error || r.error) throw (q.error || r.error);
       questions = q.data || [];
       resources = r.data || [];
       notices = (n && n.data) || [];
+      discussPosts = (d && d.data) || [];
       renderQna(); renderRes(); renderPending(); renderPopular(); updateBellBadge();
       if (!$("noticeSection").classList.contains("hidden")) renderNotices();
+      if (!$("discussSection").classList.contains("hidden")) renderDiscuss();
     } catch (e) {
       toast("데이터를 불러오지 못했습니다. 연결 정보를 확인해주세요.");
       $("qnaList").innerHTML = '<div class="empty">데이터를 불러오지 못했습니다.</div>';
@@ -1102,6 +1151,82 @@
     if (!confirm("이 공지를 삭제할까요?")) return;
     try {
       var res = await db.from("notices").delete().eq("id", id);
+      if (res.error) throw res.error;
+      toast("삭제되었습니다.");
+      await loadData();
+    } catch(e) { toast("삭제에 실패했습니다."); }
+  }
+
+  // ── 토론(자유게시판)
+  var discussEditMode = {};
+
+  function renderDiscuss(){
+    var el = $("discussList");
+    if (discussPosts.length === 0) {
+      el.innerHTML = '<div class="empty">아직 등록된 이야기가 없습니다. 첫 글을 남겨보세요.</div>';
+      return;
+    }
+    el.innerHTML = discussPosts.map(function(d){
+      var canManage = isAdmin() || d.branch === user.branch;
+      var editing = !!discussEditMode[d.id];
+      var html = '<article class="card" style="padding:12px 14px">' +
+        '<div class="cardMeta"><span class="catTag">'+esc(d.branch)+'</span>' +
+        '<span class="metaText">'+esc(d.author)+' · '+fmt(d.created_at)+'</span></div>';
+      if (editing) {
+        var opts = NAMES.map(function(n){ return '<option'+(n===d.author?' selected':'')+'>'+esc(n)+'</option>'; }).join("");
+        html += '<select class="sel" id="dEditAuthor_'+esc(d.id)+'" style="width:100%;margin:8px 0">'+opts+'</select>' +
+          '<textarea class="ta" id="dEditText_'+esc(d.id)+'" rows="3" style="margin-bottom:8px">'+esc(d.text)+'</textarea>' +
+          '<div class="btnRow">' +
+            '<button class="btnMain" onclick="saveDiscussEdit(\''+esc(d.id)+'\')">저장</button>' +
+            '<button class="btnGhost" onclick="cancelDiscussEdit(\''+esc(d.id)+'\')">취소</button>' +
+          '</div>';
+      } else {
+        html += '<p class="qText" style="margin-top:8px">'+esc(d.text)+'</p>';
+        if (canManage) {
+          html += '<div class="btnRow" style="margin-top:8px">' +
+            '<button class="btnGhost" onclick="editDiscuss(\''+esc(d.id)+'\')">수정</button>' +
+            '<button class="btnDel" onclick="deleteDiscuss(\''+esc(d.id)+'\')">삭제</button>' +
+          '</div>';
+        }
+      }
+      html += '</article>';
+      return html;
+    }).join("");
+  }
+
+  async function submitDiscuss(){
+    var author = $("discussAuthor").value;
+    var text = $("discussDraft").value.trim();
+    if (!text) { toast("내용을 입력해주세요."); return; }
+    try {
+      var res = await db.from("discuss").insert({ author: author, branch: user.branch, text: text });
+      if (res.error) throw res.error;
+      $("discussDraft").value = "";
+      toast("등록되었습니다.");
+      await loadData();
+    } catch(e) { toast("등록 실패: " + (e && e.message ? e.message : String(e))); }
+  }
+
+  function editDiscuss(id){ discussEditMode[id] = true; renderDiscuss(); }
+  function cancelDiscussEdit(id){ delete discussEditMode[id]; renderDiscuss(); }
+
+  async function saveDiscussEdit(id){
+    var author = $("dEditAuthor_"+id).value;
+    var text = $("dEditText_"+id).value.trim();
+    if (!text) { toast("내용을 입력해주세요."); return; }
+    try {
+      var res = await db.from("discuss").update({ author: author, text: text }).eq("id", id);
+      if (res.error) throw res.error;
+      delete discussEditMode[id];
+      toast("수정되었습니다.");
+      await loadData();
+    } catch(e) { toast("수정 실패: " + (e && e.message ? e.message : String(e))); }
+  }
+
+  async function deleteDiscuss(id){
+    if (!confirm("이 글을 삭제할까요?")) return;
+    try {
+      var res = await db.from("discuss").delete().eq("id", id);
       if (res.error) throw res.error;
       toast("삭제되었습니다.");
       await loadData();
@@ -1483,6 +1608,7 @@
         .on("postgres_changes", { event: "*", schema: "public", table: "questions" }, scheduleReload)
         .on("postgres_changes", { event: "*", schema: "public", table: "resources" }, scheduleReload)
         .on("postgres_changes", { event: "*", schema: "public", table: "notices" }, scheduleReload)
+        .on("postgres_changes", { event: "*", schema: "public", table: "discuss" }, scheduleReload)
         .subscribe();
     } catch(e){}
   }
