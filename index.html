@@ -414,6 +414,12 @@
         background:#fff;border:1px solid var(--line);border-radius:8px;margin-top:-6px;
         max-height:220px;overflow-y:auto;box-shadow:0 6px 16px rgba(27,42,74,.15)"></div>
     </div>
+    <label style="display:block;font-size:13px;font-weight:700;color:var(--navy);margin-bottom:6px">사진 첨부 (선택, 최대 3장)</label>
+    <p style="margin:-2px 0 8px;font-size:11.5px;color:var(--muted);line-height:1.5">
+      카메라로 바로 촬영하거나 갤러리에서 선택할 수 있습니다. 고객 실명·계좌번호 등이 보이는 사진은 첨부하지 마세요.
+    </p>
+    <input class="inp" id="qImages" type="file" accept="image/*" capture="environment" multiple style="padding:9px" onchange="previewQImages()">
+    <div id="qImagePreview" style="display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 10px"></div>
     <div class="btnRow">
       <button class="btnMain" id="qSubmit" onclick="submitQuestion()">등록</button>
       <button class="btnGhost" onclick="closeModal('qModal')">취소</button>
@@ -525,6 +531,12 @@
   var qnaFilter = "전체", resFilter = "전체";
   var expandedId = null;
   var answerDrafts = {};
+  var answerEditMode = {};
+  function toggleAnswerEdit(id, cancel){
+    if (cancel) { delete answerEditMode[id]; delete answerDrafts[id]; }
+    else answerEditMode[id] = true;
+    renderQna();
+  }
 
   // ── 유틸
   function $(id){ return document.getElementById(id); }
@@ -548,6 +560,7 @@
   function openQModal(){
     if (qnaFilter !== "전체" && CATEGORIES.indexOf(qnaFilter) >= 0) $("qCat").value = qnaFilter;
     else $("qCat").selectedIndex = 0;
+    $("qImages").value = ""; $("qImagePreview").innerHTML = "";
     openModal("qModal");
   }
   var editingResourceId = null;
@@ -795,6 +808,13 @@
         '</button>';
       if (open) {
         html += '<div class="cardBody"><p class="qText">'+esc(q.content)+'</p>';
+        if (q.images && q.images.length) {
+          html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' +
+            q.images.map(function(url){
+              return '<a href="'+esc(url)+'" target="_blank" rel="noreferrer">' +
+                '<img src="'+esc(url)+'" style="width:88px;height:88px;object-fit:cover;border-radius:8px;border:1px solid var(--line)"></a>';
+            }).join("") + '</div>';
+        }
         if (q.answer) {
           if (answerLocked(q)) {
             html += '<div class="answerBox"><div class="answerHead">관리자 답변 🔒</div>' +
@@ -802,18 +822,33 @@
                     '<div style="margin-top:10px"><button class="btnMain" onclick="unlockAnswer(\''+esc(q.id)+'\')">답변 보기</button></div></div>';
           } else {
             html += '<div class="answerBox"><div class="answerHead">관리자 답변 <span class="metaText">'+fmt(q.answered_at)+'</span></div>' +
-                    '<p class="qText">'+esc(q.answer)+'</p></div>';
+                    '<p class="qText">'+esc(q.answer)+'</p>' + renderFileChips(q.answer_files) + '</div>';
           }
         }
         if (isAdmin()) {
-          var draft = answerDrafts[q.id] != null ? answerDrafts[q.id] : (q.answer || "");
-          html += '<div style="margin-top:14px">' +
-            '<textarea class="ta" rows="4" id="ans_'+esc(q.id)+'" placeholder="'+(q.answer?"답변 수정 내용 입력":"답변 입력")+'" oninput="answerDrafts[\''+esc(q.id)+'\']=this.value">'+esc(draft)+'</textarea>' +
-
-            '<div class="btnRow">' +
-              '<button class="btnMain" onclick="submitAnswer(\''+esc(q.id)+'\')">'+(q.answer?"답변 수정":"답변 등록")+'</button>' +
+          var showForm = !q.answer || answerEditMode[q.id];
+          if (q.answer && !showForm) {
+            html += '<div class="btnRow" style="margin-top:10px">' +
+              '<button class="btnGhost" onclick="toggleAnswerEdit(\''+esc(q.id)+'\')">답변 수정</button>' +
               '<button class="btnDel" onclick="deleteQuestion(\''+esc(q.id)+'\')">질문 삭제</button>' +
-            '</div></div>';
+            '</div>';
+          } else {
+            var draft = answerDrafts[q.id] != null ? answerDrafts[q.id] : (q.answer || "");
+            var existingFiles = (q.answer_files && q.answer_files.length)
+              ? '<p style="margin:6px 0 0;font-size:11.5px;color:var(--muted)">기존 첨부 ' + q.answer_files.length + '건 (새로 첨부하면 교체됩니다)</p>' : "";
+            html += '<div style="margin-top:14px">' +
+              '<textarea class="ta" rows="4" id="ans_'+esc(q.id)+'" placeholder="'+(q.answer?"답변 수정 내용 입력":"답변 입력")+'" oninput="answerDrafts[\''+esc(q.id)+'\']=this.value">'+esc(draft)+'</textarea>' +
+              '<label style="display:block;font-size:12.5px;font-weight:700;color:var(--navy);margin-bottom:4px">사진 촬영 또는 자료 첨부 (선택, 최대 3개)</label>' +
+              '<input class="inp" type="file" id="ansFile_'+esc(q.id)+'" accept="image/*,.pdf,.hwp,.hwpx,.doc,.docx,.ppt,.pptx" capture="environment" multiple style="padding:9px" onchange="previewAnsFiles(\''+esc(q.id)+'\')">' +
+              existingFiles +
+              '<div id="ansFilePreview_'+esc(q.id)+'" style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"></div>' +
+              '<div class="btnRow">' +
+                '<button class="btnMain" onclick="submitAnswer(\''+esc(q.id)+'\')">'+(q.answer?"수정 저장":"답변 등록")+'</button>' +
+                (q.answer
+                  ? '<button class="btnGhost" onclick="toggleAnswerEdit(\''+esc(q.id)+'\', true)">취소</button>'
+                  : '<button class="btnDel" onclick="deleteQuestion(\''+esc(q.id)+'\')">질문 삭제</button>') +
+              '</div></div>';
+          }
         }
         html += '</div>';
       }
@@ -1106,6 +1141,24 @@
   // 워드/엑셀/PPT는 브라우저가 직접 못 열어서 온라인 뷰어로 감싸 바로 보이게 처리
   // PDF/이미지는 브라우저가 원래 새 탭에서 바로 보여줌
   // HWP는 지원되는 공인 온라인 뷰어가 없어 다운로드로 안내
+  function renderFileChips(files){
+    if (!files || !files.length) return "";
+    return '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' +
+      files.map(function(f){
+        var url = typeof f === "string" ? f : f.url;
+        var name = typeof f === "string" ? "" : (f.name || "");
+        var ext = (url.split("?")[0].match(/\.([a-zA-Z0-9]+)$/) || [,""])[1].toLowerCase();
+        if (["jpg","jpeg","png","gif","webp"].indexOf(ext) >= 0) {
+          return '<a href="'+esc(url)+'" target="_blank" rel="noreferrer">' +
+            '<img src="'+esc(url)+'" style="width:88px;height:88px;object-fit:cover;border-radius:8px;border:1px solid var(--line)"></a>';
+        }
+        var prev = resolvePreviewUrl(url);
+        return '<a href="'+esc(prev.url)+'" target="_blank" rel="noreferrer" style="text-decoration:none;display:inline-flex;' +
+          'align-items:center;gap:6px;background:var(--paper);border:1px solid var(--line);border-radius:8px;' +
+          'padding:8px 12px;font-size:12.5px;color:var(--navy);font-weight:700">📎 ' + esc(name || "첨부파일") + '</a>';
+      }).join("") + '</div>';
+  }
+
   function resolvePreviewUrl(link){
     if (!link) return { url: "", note: "" };
     var m = link.split("?")[0].match(/\.([a-zA-Z0-9]+)$/);
@@ -1178,15 +1231,29 @@
     if (!title || !content) { toast("제목과 내용을 입력해주세요."); return; }
     if (!author) { toast("작성자를 선택해주세요."); return; }
     if (NAMES.indexOf(author) < 0) { toast("목록에 있는 이름을 선택해주세요."); return; }
+    var files = Array.prototype.slice.call($("qImages").files || []);
+    if (files.length > 3) { toast("사진은 최대 3장까지 첨부할 수 있습니다."); return; }
     $("qSubmit").disabled = true; $("qSubmit").textContent = "등록 중…";
     try {
+      var imageUrls = [];
+      for (var i = 0; i < files.length; i++) {
+        var f = files[i];
+        if (f.size > 15 * 1024 * 1024) { toast("사진 1장당 15MB 이하만 첨부할 수 있습니다."); throw new Error("size"); }
+        var ext = (f.name.split(".").pop() || "jpg").toLowerCase();
+        var path = Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7) + "." + ext;
+        var up = await db.storage.from("files").upload(path, f);
+        if (up.error) throw up.error;
+        var pub = db.storage.from("files").getPublicUrl(path);
+        imageUrls.push(pub.data.publicUrl);
+      }
       var res = await db.from("questions").insert({
         title: title, content: content,
         category: $("qCat").value, branch: user.branch,
-        author: author
+        author: author, images: imageUrls.length ? imageUrls : null
       });
       if (res.error) throw res.error;
       $("qTitle").value = ""; $("qContent").value = ""; $("qAuthor").value = "";
+      $("qImages").value = ""; $("qImagePreview").innerHTML = "";
       closeModal("qModal"); toast("질문이 등록되었습니다.");
       await loadData();
     } catch (e) {
@@ -1196,15 +1263,70 @@
     }
   }
 
+  function previewQImages(){
+    var files = Array.prototype.slice.call($("qImages").files || []);
+    if (files.length > 3) {
+      toast("사진은 최대 3장까지 첨부할 수 있습니다.");
+    }
+    var el = $("qImagePreview");
+    el.innerHTML = "";
+    files.slice(0, 3).forEach(function(f){
+      var url = URL.createObjectURL(f);
+      var img = document.createElement("img");
+      img.src = url;
+      img.style.cssText = "width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid " + "var(--line)";
+      el.appendChild(img);
+    });
+  }
+
+  function previewAnsFiles(id){
+    var files = Array.prototype.slice.call(($("ansFile_"+id) || {}).files || []);
+    if (files.length > 3) toast("첨부는 최대 3개까지 가능합니다.");
+    var el = $("ansFilePreview_"+id);
+    if (!el) return;
+    el.innerHTML = "";
+    files.slice(0, 3).forEach(function(f){
+      if (f.type && f.type.indexOf("image/") === 0) {
+        var img = document.createElement("img");
+        img.src = URL.createObjectURL(f);
+        img.style.cssText = "width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--line)";
+        el.appendChild(img);
+      } else {
+        var chip = document.createElement("div");
+        chip.textContent = "📎 " + f.name;
+        chip.style.cssText = "font-size:12px;color:var(--navy);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:6px 10px";
+        el.appendChild(chip);
+      }
+    });
+  }
+
   async function submitAnswer(id){
     var el = $("ans_"+id);
     var text = (el ? el.value : "").trim();
     if (!text) { toast("답변 내용을 입력해주세요."); return; }
+    var fileInput = $("ansFile_"+id);
+    var files = fileInput ? Array.prototype.slice.call(fileInput.files || []) : [];
+    if (files.length > 3) { toast("첨부는 최대 3개까지 가능합니다."); return; }
     var upd = { answer: text, answered_at: new Date().toISOString() };
     try {
+      if (files.length > 0) {
+        var uploaded = [];
+        for (var i = 0; i < files.length; i++) {
+          var f = files[i];
+          if (f.size > 20 * 1024 * 1024) { toast("첨부 파일은 1개당 20MB 이하만 가능합니다."); return; }
+          var ext = (f.name.split(".").pop() || "bin").toLowerCase();
+          var path = Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7) + "." + ext;
+          var up = await db.storage.from("files").upload(path, f);
+          if (up.error) throw up.error;
+          var pub = db.storage.from("files").getPublicUrl(path);
+          uploaded.push({ url: pub.data.publicUrl, name: f.name });
+        }
+        upd.answer_files = uploaded;
+      }
       var res = await db.from("questions").update(upd).eq("id", id);
       if (res.error) throw res.error;
       delete answerDrafts[id];
+      delete answerEditMode[id];
       toast("답변이 등록되었습니다.");
       await loadData();
     } catch (e) {
