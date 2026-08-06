@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<style>
+@font-face{font-family:'CUNanum';src:url('fonts/CUNanum-Regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'CUNanum';src:url('fonts/CUNanum-Bold.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
+body{margin:0}
+*{box-sizing:border-box}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+::-webkit-scrollbar{display:none}
+a{color:#0056a7}
+a:hover{color:#003f7d}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#e7e3dc;display:flex;align-items:center;justify-content:center;padding:36px 20px;font-family:'CUNanum','Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,sans-serif">
+  <div style="position:relative;width:390px;height:844px;background:#0c0c0e;border-radius:54px;padding:12px;box-shadow:0 40px 80px rgba(20,20,30,.35)">
+    <div style="width:100%;height:100%;background:#F5F7F9;border-radius:42px;overflow:hidden;position:relative;display:flex;flex-direction:column">
+
+      <div style="height:46px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 26px;background:{{ statusBarBg }};color:{{ statusBarColor }};position:relative;z-index:40">
+        <span style="font-size:15px;font-weight:700;letter-spacing:.02em">9:41</span>
+        <div style="position:absolute;top:6px;left:50%;transform:translateX(-50%);width:126px;height:30px;background:#000;border-radius:16px"></div>
+        <div style="display:flex;align-items:center;gap:5px">
+          <div style="display:flex;align-items:flex-end;gap:2px;height:11px">
+            <div style="width:3px;height:4px;background:currentColor;border-radius:1px"></div>
+            <div style="width:3px;height:6px;background:currentColor;border-radius:1px"></div>
+            <div style="width:3px;height:8px;background:currentColor;border-radius:1px"></div>
+            <div style="width:3px;height:11px;background:currentColor;border-radius:1px"></div>
+          </div>
+          <div style="width:22px;height:11px;border:1.4px solid currentColor;border-radius:3px;position:relative;padding:1.5px">
+            <div style="width:70%;height:100%;background:currentColor;border-radius:1px"></div>
+          </div>
+        </div>
+      </div>
+
+      <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1;overflow-y:auto;background:#0056a7;display:flex;align-items:center;padding:24px 22px 40px">
+          <div style="width:100%;background:#fff;border-radius:20px;border-top:5px solid #d8a100;padding:30px 24px 26px;box-shadow:0 10px 30px rgba(0,0,0,.15)">
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;letter-spacing:.06em;color:#a87e00;font-weight:700">
+              <img src="icons/logo.png" alt="" style="height:15px;width:auto">미소신용협동조합 · 평생어부바 🐷
+            </div>
+            <h1 style="margin:8px 0 4px;font-size:24px;font-weight:800;letter-spacing:-0.01em;color:#0056a7">자금세탁방지 Q&amp;A</h1>
+            <p style="margin:0 0 20px;font-size:13px;color:#7A8090;line-height:1.5">지점 계정으로 로그인해주세요.</p>
+            <input class="loginInput" placeholder="아이디" value="{{ loginId }}" onChange="{{ onLoginIdChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:10px;padding:12px 13px;margin-bottom:9px;background:#fff;color:#22252B;font-size:15px">
+            <input type="password" placeholder="비밀번호" value="{{ loginPw }}" onChange="{{ onLoginPwChange }}" onKeyDown="{{ onLoginKeyDown }}" style="width:100%;border:1px solid #DDE3E8;border-radius:10px;padding:12px 13px;margin-bottom:12px;background:#fff;color:#22252B;font-size:15px">
+            <sc-if value="{{ loginErr }}" hint-placeholder-val="{{ false }}">
+              <div style="color:#C0392B;font-size:12.5px;margin-bottom:10px">아이디 또는 비밀번호가 일치하지 않습니다.</div>
+            </sc-if>
+            <button onClick="{{ onLoginSubmit }}" style="width:100%;padding:13px;background:#0056a7;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;margin-bottom:16px">로그인</button>
+            <div style="display:flex;gap:8px">
+              <button onClick="{{ onDemoBranch }}" style="flex:1;padding:10px 8px;background:#F5F7F9;color:#0056a7;border:1px solid #DDE3E8;border-radius:10px;font-size:12px;font-weight:700">지점 계정 체험</button>
+              <button onClick="{{ onDemoAdmin }}" style="flex:1;padding:10px 8px;background:#F5F7F9;color:#0056a7;border:1px solid #DDE3E8;border-radius:10px;font-size:12px;font-weight:700">관리자 계정 체험</button>
+            </div>
+            <p style="margin:14px 0 0;font-size:11.5px;color:#7A8090;text-align:center">계정 문의: 관리자</p>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isMain }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+          <div style="background:#0056a7;color:#fff;flex-shrink:0;position:relative;overflow:hidden">
+            <img src="icons/logo.png" alt="" style="position:absolute;top:50%;right:-30px;transform:translateY(-50%);width:150px;opacity:.14;pointer-events:none">
+            <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:12px 18px 0">
+              <span style="background:#d8a100;color:#0056a7;font-weight:800;font-size:12px;border-radius:6px;padding:5px 10px;white-space:nowrap;flex-shrink:0">{{ shortBranch }}</span>
+              <div style="display:flex;gap:8px">
+                <button onClick="{{ onOpenHistory }}" style="position:relative;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;padding:0">
+                  🔔
+                  <sc-if value="{{ bellCount }}" hint-placeholder-val="{{ false }}">
+                    <span style="position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 3px;border-radius:999px;background:#E4402A;color:#fff;font-size:9.5px;font-weight:800;line-height:16px;text-align:center;box-shadow:0 0 0 2px #0056a7">{{ bellCount }}</span>
+                  </sc-if>
+                </button>
+                <button onClick="{{ onLogout }}" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;padding:0">🚪</button>
+              </div>
+            </div>
+            <div style="position:relative;padding:10px 18px 12px">
+              <div style="font-size:18px;font-weight:800">자금세탁방지 Q&amp;A</div>
+              <div style="font-size:11.5px;color:rgba(255,255,255,.72);margin-top:2px">{{ roleLabel }} 계정으로 로그인됨</div>
+            </div>
+            <sc-if value="{{ showPendingBar }}" hint-placeholder-val="{{ false }}">
+              <div style="position:relative;background:#00afd5;color:#fff;font-size:12.5px;font-weight:700;text-align:center;padding:7px 12px">답변 대기 중인 질문 {{ pendingCount }}건</div>
+            </sc-if>
+          </div>
+
+          <div style="flex:1;overflow-y:auto;padding:14px 16px 104px;-webkit-overflow-scrolling:touch">
+
+            <sc-if value="{{ isQnaTab }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;margin:-2px -2px 2px">
+                <sc-for list="{{ qnaChips }}" as="c" hint-placeholder-count="4">
+                  <button onClick="{{ c.onClick }}" style="flex-shrink:0;background:{{ c.bg }};border:1px solid {{ c.border }};border-radius:999px;padding:6px 12px;font-size:12px;color:{{ c.color }};font-weight:{{ c.weight }};white-space:nowrap">{{ c.label }}</button>
+                </sc-for>
+              </div>
+              <input placeholder="제목·내용 검색" value="{{ qnaSearch }}" onChange="{{ onQnaSearchChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:9px;padding:9px 12px;background:#fff;color:#22252B;font-size:13.5px;margin-bottom:10px">
+              <sc-if value="{{ showAskBtn }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ onOpenAsk }}" style="width:100%;padding:11px;background:#d8a100;color:#0056a7;border:none;border-radius:9px;font-size:14px;font-weight:800;margin-bottom:12px">＋ 질문하기</button>
+              </sc-if>
+              <sc-if value="{{ qnaEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="text-align:center;color:#7A8090;font-size:13.5px;padding:40px 0;background:#fff;border:1px dashed #DDE3E8;border-radius:12px">
+                  <img src="icons/pig-blue.png" alt="" style="width:110px;display:block;margin:0 auto 12px">조건에 맞는 질문이 없습니다.
+                </div>
+              </sc-if>
+              <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:10px">
+                <sc-for list="{{ qnaList }}" as="q" hint-placeholder-count="3">
+                  <button onClick="{{ q.onClick }}" style="text-align:left;background:#fff;border:1px solid #DDE3E8;border-radius:13px;padding:13px 14px;display:flex;gap:10px;align-items:center">
+                    <div style="flex:1;min-width:0">
+                      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">
+                        <span style="background:#F5F7F9;border:1px solid #DDE3E8;border-radius:4px;padding:2px 6px;font-size:10.5px;color:#0056a7;font-weight:700;white-space:nowrap;flex-shrink:0">{{ q.catLabel }}</span>
+                        <span style="font-size:11px;color:#7A8090;white-space:nowrap">{{ q.metaText }}</span>
+                      </div>
+                      <div style="font-size:14px;font-weight:700;line-height:1.4;color:#22252B">{{ q.title }}</div>
+                    </div>
+                    <span style="flex-shrink:0;white-space:nowrap;border:{{ q.stampBorder }};color:{{ q.stampColor }};border-radius:6px;padding:3px 8px;font-size:10.5px;font-weight:800;transform:{{ q.stampTransform }}">{{ q.stampLabel }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isNoticeTab }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ onOpenNoticeAdd }}" style="width:100%;padding:11px;background:#d8a100;color:#0056a7;border:none;border-radius:9px;font-size:14px;font-weight:800;margin-bottom:12px">＋ 공지 등록</button>
+              </sc-if>
+              <sc-if value="{{ noticeEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="text-align:center;color:#7A8090;font-size:13.5px;padding:40px 0;background:#fff;border:1px dashed #DDE3E8;border-radius:12px">
+                  <img src="icons/pig-orange.png" alt="" style="width:110px;display:block;margin:0 auto 12px">등록된 공지사항이 없습니다.
+                </div>
+              </sc-if>
+              <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:10px">
+                <sc-for list="{{ noticeList }}" as="n" hint-placeholder-count="2">
+                  <div style="background:#fff;border:1px solid #DDE3E8;border-radius:13px;overflow:hidden">
+                    <button onClick="{{ n.onClick }}" style="width:100%;text-align:left;background:none;border:none;padding:13px 14px">
+                      <div style="font-size:11px;color:#7A8090;margin-bottom:5px;white-space:nowrap">{{ n.dateText }}</div>
+                      <div style="font-size:14px;font-weight:700;color:#22252B">{{ n.title }}</div>
+                    </button>
+                    <sc-if value="{{ n.open }}" hint-placeholder-val="{{ false }}">
+                      <div style="border-top:1px solid #DDE3E8;padding:12px 14px 14px">
+                        <p style="margin:0;font-size:13.5px;line-height:1.7;white-space:pre-wrap;color:#22252B">{{ n.content }}</p>
+                        <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+                          <div style="display:flex;gap:8px;margin-top:12px">
+                            <button onClick="{{ n.onDelete }}" style="background:transparent;color:#C0392B;border:1px solid #C0392B;border-radius:8px;padding:7px 13px;font-size:12px">삭제</button>
+                          </div>
+                        </sc-if>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isResTab }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:10px">
+                <sc-for list="{{ resChips }}" as="c" hint-placeholder-count="4">
+                  <button onClick="{{ c.onClick }}" style="flex-shrink:0;background:{{ c.bg }};border:1px solid {{ c.border }};border-radius:999px;padding:6px 12px;font-size:12px;color:{{ c.color }};font-weight:{{ c.weight }};white-space:nowrap">{{ c.label }}</button>
+                </sc-for>
+              </div>
+              <button onClick="{{ onOpenResAdd }}" style="width:100%;padding:11px;background:#d8a100;color:#0056a7;border:none;border-radius:9px;font-size:14px;font-weight:800;margin-bottom:12px">＋ 자료 등록</button>
+              <sc-if value="{{ resEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="text-align:center;color:#7A8090;font-size:13.5px;padding:40px 0;background:#fff;border:1px dashed #DDE3E8;border-radius:12px">등록된 자료가 없습니다.</div>
+              </sc-if>
+              <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:10px">
+                <sc-for list="{{ resList }}" as="r" hint-placeholder-count="3">
+                  <div style="background:#fff;border:1px solid #DDE3E8;border-radius:13px;padding:13px 14px">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                      <span style="background:#F5F7F9;border:1px solid #DDE3E8;border-radius:4px;padding:2px 6px;font-size:10.5px;color:#0056a7;font-weight:700;white-space:nowrap;flex-shrink:0">{{ r.category }}</span>
+                      <span style="font-size:11px;color:#7A8090;white-space:nowrap">{{ r.dateText }}</span>
+                    </div>
+                    <div style="font-size:14px;font-weight:700;color:#22252B;margin-bottom:4px">{{ r.title }}</div>
+                    <sc-if value="{{ r.desc }}" hint-placeholder-val="{{ false }}">
+                      <p style="margin:0 0 8px;font-size:12.5px;color:#7A8090;line-height:1.6">{{ r.desc }}</p>
+                    </sc-if>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                      <sc-if value="{{ r.hasFile }}" hint-placeholder-val="{{ false }}">
+                        <span style="background:#0056a7;color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0">바로보기</span>
+                      </sc-if>
+                      <sc-if value="{{ r.hasLink }}" hint-placeholder-val="{{ false }}">
+                        <span style="background:#0056a7;color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0">원문 들어가기</span>
+                      </sc-if>
+                      <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+                        <button onClick="{{ r.onDelete }}" style="margin-left:auto;background:transparent;color:#C0392B;border:1px solid #C0392B;border-radius:6px;padding:5px 10px;font-size:11.5px">삭제</button>
+                      </sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isFaqTab }}" hint-placeholder-val="{{ false }}">
+              <p style="margin:0 0 12px;font-size:12.5px;color:#7A8090">전체 지점 질문 중 조회수가 많은 순서로 최대 5건이 표시됩니다.</p>
+              <sc-if value="{{ faqEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="text-align:center;color:#7A8090;font-size:13.5px;padding:40px 0;background:#fff;border:1px dashed #DDE3E8;border-radius:12px">
+                  <img src="icons/pig-yellow.png" alt="" style="width:110px;display:block;margin:0 auto 12px">아직 조회된 질문이 없습니다.
+                </div>
+              </sc-if>
+              <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:10px">
+                <sc-for list="{{ faqList }}" as="f" hint-placeholder-count="3">
+                  <button onClick="{{ f.onClick }}" style="width:100%;text-align:left;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #DDE3E8;border-radius:13px;padding:12px 14px">
+                    <div style="flex-shrink:0;min-width:44px;height:24px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;color:#fff;background:{{ f.rankColor }};padding:0 6px">TOP{{ f.rank }}</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#22252B">{{ f.title }}</div>
+                      <div style="font-size:11px;color:#7A8090;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.sub }}</div>
+                    </div>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isDiscussTab }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fff;border:1px solid #DDE3E8;border-radius:13px;padding:12px 14px;margin-bottom:14px">
+                <select value="{{ discussAuthor }}" onChange="{{ onDiscussAuthorChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:9px;padding:9px 10px;background:#F5F7F9;color:#22252B;font-size:13px;margin-bottom:8px">
+                  <sc-for list="{{ discussNames }}" as="nm" hint-placeholder-count="5"><option>{{ nm }}</option></sc-for>
+                </select>
+                <textarea rows="3" placeholder="지점 직원들과 자유롭게 의견을 나눠보세요" value="{{ discussDraft }}" onChange="{{ onDiscussDraftChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:9px;padding:10px 12px;resize:vertical;background:#F5F7F9;color:#22252B;font-size:13.5px;margin-bottom:8px"></textarea>
+                <button onClick="{{ onSubmitDiscuss }}" style="width:100%;padding:10px;background:#0056a7;color:#fff;border:none;border-radius:9px;font-size:13.5px;font-weight:700">등록</button>
+              </div>
+              <sc-if value="{{ discussEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="text-align:center;color:#7A8090;font-size:13.5px;padding:40px 0;background:#fff;border:1px dashed #DDE3E8;border-radius:12px">아직 등록된 이야기가 없습니다. 첫 글을 남겨보세요.</div>
+              </sc-if>
+              <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:10px">
+                <sc-for list="{{ discussList }}" as="d" hint-placeholder-count="3">
+                  <div style="background:#fff;border:1px solid #DDE3E8;border-radius:13px;padding:12px 14px">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                      <span style="background:#F5F7F9;border:1px solid #DDE3E8;border-radius:4px;padding:2px 7px;font-size:10.5px;color:#0056a7;font-weight:700;white-space:nowrap;flex-shrink:0">{{ d.branch }}</span>
+                      <span style="font-size:11.5px;color:#7A8090;white-space:nowrap">{{ d.author }} · {{ d.dateText }}</span>
+                    </div>
+                    <sc-if value="{{ d.editing }}" hint-placeholder-val="{{ false }}">
+                      <select value="{{ discussEditAuthor }}" onChange="{{ onDiscussEditAuthorChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:8px;padding:8px 9px;background:#F5F7F9;color:#22252B;font-size:12.5px;margin-bottom:6px">
+                        <sc-for list="{{ discussNames }}" as="nm" hint-placeholder-count="5"><option>{{ nm }}</option></sc-for>
+                      </select>
+                      <textarea rows="3" value="{{ discussEditDraft }}" onChange="{{ onDiscussEditDraftChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:8px;padding:9px 10px;resize:vertical;background:#F5F7F9;color:#22252B;font-size:13px;margin-bottom:8px"></textarea>
+                      <div style="display:flex;gap:8px">
+                        <button onClick="{{ d.onSaveEdit }}" style="background:#0056a7;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700">저장</button>
+                        <button onClick="{{ d.onCancelEdit }}" style="background:transparent;color:#7A8090;border:1px solid #DDE3E8;border-radius:8px;padding:8px 12px;font-size:12.5px">취소</button>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ d.notEditing }}" hint-placeholder-val="{{ true }}">
+                      <p style="margin:0;font-size:13.5px;line-height:1.65;color:#22252B;white-space:pre-wrap">{{ d.text }}</p>
+                      <sc-if value="{{ d.canManage }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:flex;gap:8px;margin-top:8px">
+                          <button onClick="{{ d.onEdit }}" style="background:transparent;color:#7A8090;border:1px solid #DDE3E8;border-radius:6px;padding:5px 10px;font-size:11.5px">수정</button>
+                          <button onClick="{{ d.onDelete }}" style="background:transparent;color:#C0392B;border:1px solid #C0392B;border-radius:6px;padding:5px 10px;font-size:11.5px">삭제</button>
+                        </div>
+                      </sc-if>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+          </div>
+
+          <div style="display:flex;background:#fff;border-top:1px solid #DDE3E8;flex-shrink:0;padding:6px 4px 10px">
+            <sc-for list="{{ bottomTabs }}" as="bt" hint-placeholder-count="5">
+              <button onClick="{{ bt.onClick }}" style="flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;color:{{ bt.color }}">
+                <span style="font-size:19px">{{ bt.icon }}</span>
+                <span style="font-size:10.5px;font-weight:{{ bt.weight }};white-space:nowrap">{{ bt.label }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ onCloseSheet }}" style="position:absolute;inset:0;background:rgba(27,42,74,.45);z-index:60;animation:fadeIn .15s ease"></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;max-height:86%;background:#fff;border-radius:22px 22px 0 0;z-index:61;display:flex;flex-direction:column;animation:sheetUp .22s cubic-bezier(.2,.8,.2,1);box-shadow:0 -10px 30px rgba(0,0,0,.15)">
+          <div style="flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:10px 0 4px">
+            <div style="width:40px;height:4px;background:#DDE3E8;border-radius:2px"></div>
+          </div>
+          <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:4px 18px 12px">
+            <div style="font-size:17px;font-weight:800;color:#0056a7;white-space:nowrap">{{ sheetTitle }}</div>
+            <button onClick="{{ onCloseSheet }}" style="width:28px;height:28px;border-radius:50%;background:#F5F7F9;border:none;color:#7A8090;font-size:15px">✕</button>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:0 18px 36px">
+
+            <sc-if value="{{ sheetIsQuestion }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+                <span style="background:#F5F7F9;border:1px solid #DDE3E8;border-radius:4px;padding:2px 7px;font-size:11px;color:#0056a7;font-weight:700;white-space:nowrap;flex-shrink:0">{{ activeQ.catLabel }}</span>
+                <span style="font-size:11.5px;color:#7A8090;white-space:nowrap">{{ activeQ.metaText }}</span>
+              </div>
+              <div style="font-size:16px;font-weight:800;color:#22252B;margin-bottom:10px;line-height:1.4">{{ activeQ.title }}</div>
+              <p style="margin:0 0 14px;font-size:14px;line-height:1.7;color:#22252B;white-space:pre-wrap">{{ activeQ.content }}</p>
+
+              <sc-if value="{{ activeQ.hasAnswer }}" hint-placeholder-val="{{ false }}">
+                <sc-if value="{{ activeQ.locked }}" hint-placeholder-val="{{ false }}">
+                  <div style="background:#F0F8FC;border:1px solid #C9E8F4;border-left:4px solid #00afd5;border-radius:10px;padding:13px 14px">
+                    <div style="font-size:12.5px;font-weight:800;color:#0056a7;margin-bottom:6px">관리자 답변 🔒</div>
+                    <p style="margin:0 0 10px;font-size:13px;color:#7A8090;line-height:1.6">STR 보고 답변은 누설 금지 대상입니다. 질문을 등록한 지점만 계정 비밀번호 확인 후 열람할 수 있습니다.</p>
+                    <button onClick="{{ onOpenStrUnlock }}" style="background:#0056a7;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700">답변 보기</button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ activeQ.showAnswer }}" hint-placeholder-val="{{ false }}">
+                  <div style="background:#F0F8FC;border:1px solid #C9E8F4;border-left:4px solid #00afd5;border-radius:10px;padding:13px 14px">
+                    <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:800;color:#0056a7;margin-bottom:6px"><span>관리자 답변</span><span style="font-weight:400;color:#7A8090">{{ activeQ.answeredAtText }}</span></div>
+                    <p style="margin:0;font-size:13.5px;line-height:1.7;color:#22252B;white-space:pre-wrap">{{ activeQ.answer }}</p>
+                  </div>
+                </sc-if>
+              </sc-if>
+
+              <sc-if value="{{ activeQ.isAdmin }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:16px">
+                  <textarea rows="4" placeholder="답변 입력" value="{{ answerDraft }}" onChange="{{ onAnswerDraftChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:9px;padding:10px 12px;resize:vertical;background:#fff;color:#22252B;font-size:13.5px;margin-bottom:10px"></textarea>
+                  <div style="display:flex;gap:8px">
+                    <button onClick="{{ onSubmitAnswer }}" style="background:#0056a7;color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13.5px;font-weight:700">{{ activeQ.answerBtnLabel }}</button>
+                    <button onClick="{{ onDeleteQuestion }}" style="background:transparent;color:#C0392B;border:1px solid #C0392B;border-radius:8px;padding:10px 14px;font-size:12.5px;margin-left:auto">질문 삭제</button>
+                  </div>
+                </div>
+              </sc-if>
+            </sc-if>
+
+            <sc-if value="{{ sheetIsAsk }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:8px;margin-bottom:10px">
+                <select value="{{ askForm.category }}" onChange="{{ onAskCategoryChange }}" style="flex:1;border:1px solid #DDE3E8;border-radius:9px;padding:10px;background:#fff;color:#22252B;font-size:13.5px">
+                  <sc-for list="{{ categories }}" as="cat" hint-placeholder-count="6"><option>{{ cat }}</option></sc-for>
+                </select>
+                <span style="background:#F5F7F9;border:1px solid #DDE3E8;border-radius:9px;padding:10px 14px;font-size:13px;font-weight:700;color:#0056a7;white-space:nowrap">{{ userBranchFull }}</span>
+              </div>
+              <input placeholder="제목" value="{{ askForm.title }}" onChange="{{ onAskTitleChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:9px;padding:11px 12px;margin-bottom:10px;background:#fff;color:#22252B;font-size:14px">
+              <textarea rows="5" placeholder="질문 내용 (고객 개인정보는 입력하지 마세요)" value="{{ askForm.content }}" onChange="{{ onAskContentChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:9px;padding:11px 12px;resize:vertical;background:#fff;color:#22252B;font-size:14px;margin-bottom:10px"></textarea>
+              <input placeholder="작성자" value="{{ askForm.author }}" onChange="{{ onAskAuthorChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:9px;padding:11px 12px;margin-bottom:10px;background:#fff;color:#22252B;font-size:14px">
+              <div style="display:flex;align-items:center;gap:10px;border:1px dashed #DDE3E8;border-radius:9px;padding:12px;margin-bottom:6px;color:#7A8090;font-size:12.5px">📎 사진 촬영 또는 자료 첨부 (선택, 최대 3개)</div>
+              <p style="margin:0 0 14px;font-size:11px;color:#7A8090;line-height:1.5">고객 실명·계좌번호 등이 보이는 자료는 첨부하지 마세요.</p>
+              <button onClick="{{ onSubmitAsk }}" style="width:100%;padding:12px;background:#0056a7;color:#fff;border:none;border-radius:9px;font-size:14.5px;font-weight:700">등록</button>
+            </sc-if>
+
+            <sc-if value="{{ sheetIsNoticeAdd }}" hint-placeholder-val="{{ false }}">
+              <input placeholder="제목" value="{{ noticeForm.title }}" onChange="{{ onNoticeTitleChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:9px;padding:11px 12px;margin-bottom:10px;background:#fff;color:#22252B;font-size:14px">
+              <textarea rows="6" placeholder="공지 내용" value="{{ noticeForm.content }}" onChange="{{ onNoticeContentChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:9px;padding:11px 12px;resize:vertical;background:#fff;color:#22252B;font-size:14px;margin-bottom:14px"></textarea>
+              <button onClick="{{ onSubmitNotice }}" style="width:100%;padding:12px;background:#0056a7;color:#fff;border:none;border-radius:9px;font-size:14.5px;font-weight:700">등록</button>
+            </sc-if>
+
+            <sc-if value="{{ sheetIsResAdd }}" hint-placeholder-val="{{ false }}">
+              <select value="{{ resForm.category }}" onChange="{{ onResCategoryChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:9px;padding:10px;background:#fff;color:#22252B;font-size:13.5px;margin-bottom:10px">
+                <sc-for list="{{ resCategories }}" as="cat" hint-placeholder-count="6"><option>{{ cat }}</option></sc-for>
+              </select>
+              <input placeholder="자료 제목" value="{{ resForm.title }}" onChange="{{ onResTitleChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:9px;padding:11px 12px;margin-bottom:10px;background:#fff;color:#22252B;font-size:14px">
+              <textarea rows="3" placeholder="자료 설명 (선택)" value="{{ resForm.desc }}" onChange="{{ onResDescChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:9px;padding:11px 12px;resize:vertical;background:#fff;color:#22252B;font-size:14px;margin-bottom:10px"></textarea>
+              <div style="display:flex;align-items:center;gap:10px;border:1px dashed #DDE3E8;border-radius:9px;padding:12px;margin-bottom:10px;color:#7A8090;font-size:12.5px">📎 파일 첨부 (HWP, PDF, PPT, WORD, JPG, PNG)</div>
+              <input placeholder="원문 링크 (선택)" value="{{ resForm.link }}" onChange="{{ onResLinkChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:9px;padding:11px 12px;margin-bottom:14px;background:#fff;color:#22252B;font-size:14px">
+              <button onClick="{{ onSubmitRes }}" style="width:100%;padding:12px;background:#0056a7;color:#fff;border:none;border-radius:9px;font-size:14.5px;font-weight:700">등록</button>
+            </sc-if>
+
+            <sc-if value="{{ sheetIsHistory }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+                <button onClick="{{ onClearHistory }}" style="background:transparent;color:#7A8090;border:1px solid #DDE3E8;border-radius:8px;padding:6px 12px;font-size:11.5px;white-space:nowrap;flex-shrink:0">전체 확인</button>
+              </div>
+              <sc-if value="{{ historyEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="text-align:center;color:#7A8090;font-size:13.5px;padding:40px 0">아직 알림 내역이 없습니다.</div>
+              </sc-if>
+              <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:8px">
+                <sc-for list="{{ historyList }}" as="h" hint-placeholder-count="3">
+                  <button onClick="{{ h.onClick }}" style="width:100%;text-align:left;display:flex;align-items:center;gap:12px;background:#F5F7F9;border:1px solid #DDE3E8;border-radius:12px;padding:11px 13px">
+                    <div style="font-size:19px;flex-shrink:0">{{ h.icon }}</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:13px;font-weight:700;color:#22252B">{{ h.text }}</div>
+                      <div style="font-size:11.5px;color:#7A8090;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ h.sub }}</div>
+                    </div>
+                    <div style="font-size:10.5px;color:#7A8090;flex-shrink:0">{{ h.dateText }}</div>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ strModalOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;background:rgba(27,42,74,.5);z-index:80;display:flex;align-items:center;justify-content:center;padding:24px">
+          <div style="background:#fff;border-radius:16px;padding:22px 20px;width:100%">
+            <div style="font-size:15px;font-weight:800;color:#0056a7;margin-bottom:8px">🔒 비밀번호 확인</div>
+            <p style="margin:0 0 12px;font-size:12.5px;color:#7A8090;line-height:1.6">STR 보고 답변은 누설 금지 대상입니다. 본인 지점 계정의 비밀번호를 입력해주세요.</p>
+            <input type="password" placeholder="비밀번호" value="{{ strPw }}" onChange="{{ onStrPwChange }}" style="width:100%;border:1px solid #DDE3E8;border-radius:9px;padding:11px 12px;margin-bottom:8px;background:#fff;color:#22252B;font-size:14px">
+            <sc-if value="{{ strErr }}" hint-placeholder-val="{{ false }}">
+              <div style="color:#C0392B;font-size:12px;margin-bottom:8px">비밀번호가 일치하지 않습니다.</div>
+            </sc-if>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button onClick="{{ onStrConfirm }}" style="flex:1;padding:11px;background:#0056a7;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700">확인</button>
+              <button onClick="{{ onStrCancel }}" style="flex:1;padding:11px;background:transparent;color:#7A8090;border:1px solid #DDE3E8;border-radius:9px;font-size:14px">취소</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ toastMsg }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;bottom:96px;left:50%;transform:translateX(-50%);background:#0056a7;color:#fff;border-radius:9px;padding:10px 18px;font-size:13px;z-index:90;box-shadow:0 4px 14px rgba(0,0,0,.2);white-space:nowrap;animation:toastIn .2s ease">{{ toastMsg }}</div>
+      </sc-if>
+
+      <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;background:rgba(0,0,0,.3);border-radius:3px;z-index:70"></div>
+      </sc-if>
+      <sc-if value="{{ isMain }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;background:rgba(0,0,0,.25);border-radius:3px;z-index:70"></div>
+      </sc-if>
+
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const CATEGORIES = ["고객확인(CDD/EDD)","CTR 보고","STR 보고","교육·자격","제도·규정","기타"];
+const RES_CATEGORIES = ["법령 및 규정","교육자료","유권해석사례집","업무매뉴얼","서식","기타"];
+const ACCOUNTS = {
+  miso06: { pw: "miso06", branch: "정왕본점", role: "branch" },
+  miso: { pw: "miso", branch: "관리자", role: "admin" }
+};
+const RANK_COLORS = ["#d8a100","#00afd5","#0056a7","#6B8CB8","#9AAAC0"];
+
+function initQuestions(){
+  return [
+    { id:1, category:"고객확인(CDD/EDD)", branch:"정왕본점", author:"김미소", title:"법인 고객 실소유자 확인 서류 범위가 궁금합니다", content:"법인 신규 계좌 개설 시 실소유자 확인서 외에 추가로 받아야 하는 서류가 있을까요? 최근 감사에서 지적받은 사례가 있어 문의드립니다.", answer:"실소유자 확인서와 함께 주주명부 또는 법인등기부등본상 지분 확인이 가능한 서류를 추가로 받아주세요. 25% 이상 지분 보유자는 반드시 신분증 사본을 함께 보관해야 합니다.", createdAt:"2026-07-29T10:12:00", answeredAt:"2026-07-29T15:40:00", viewCount:34 },
+    { id:2, category:"STR 보고", branch:"목감지점", author:"박헌민", title:"거래패턴 이상 의심 고객 STR 보고 시점 문의", content:"특정 고객의 입출금 패턴이 최근 급격히 변화했습니다. 보고 시점을 어떻게 판단해야 하나요?", answer:"의심 거래 인지 후 영업일 기준 3일 이내 본부로 1차 보고해주세요. 판단이 어려운 경우 보류하지 말고 우선 보고 후 본부와 협의 바랍니다.", createdAt:"2026-07-30T09:00:00", answeredAt:"2026-07-30T11:20:00", viewCount:19 },
+    { id:3, category:"CTR 보고", branch:"연성지점", author:"강지혜", title:"1일 누적 거래금액 산정 시 계좌 이체도 포함되나요?", content:"현금 거래가 아닌 계좌간 이체도 CTR 누적 산정 대상에 포함되는지 궁금합니다.", answer:null, createdAt:"2026-08-04T14:32:00", answeredAt:null, viewCount:8 },
+    { id:4, category:"제도·규정", branch:"월곶지점", author:"윤여진", title:"2026년 하반기 AML 규정 개정사항 요약이 있을까요?", content:"하반기 개정 규정을 한눈에 볼 수 있는 요약 자료가 있으면 안내 부탁드립니다.", answer:null, createdAt:"2026-08-05T09:15:00", answeredAt:null, viewCount:3 },
+    { id:5, category:"교육·자격", branch:"하중지점", author:"최진식", title:"AML 핵심요원 자격 갱신 교육은 온라인으로도 가능한가요?", content:"이번 분기 갱신 교육을 온라인으로 이수할 수 있는지 확인 부탁드립니다.", answer:"네, 중앙회 교육플랫폼에서 온라인 이수 가능합니다. 자료실 > 교육자료 탭에 접속 안내를 올려두었습니다.", createdAt:"2026-07-20T11:00:00", answeredAt:"2026-07-20T16:00:00", viewCount:52 }
+  ];
+}
+function initNotices(){
+  return [
+    { id:1, title:"2026년 AML 핵심요원 보수교육 일정 안내", content:"2026년 하반기 보수교육이 9월 중 진행됩니다. 대상자는 자료실에서 사전학습자료를 확인해주세요.", createdAt:"2026-08-01T09:00:00" },
+    { id:2, title:"STR 보고 기한 관련 유의사항", content:"최근 STR 보고 지연 사례가 발생하고 있습니다. 의심거래 인지 후 3영업일 이내 보고 원칙을 준수해주세요.", createdAt:"2026-07-25T10:00:00" }
+  ];
+}
+function initResources(){
+  return [
+    { id:1, category:"법령 및 규정", title:"특정금융거래정보법 시행령 (2026 개정)", desc:"2026년 개정 시행령 전문", hasFile:true, hasLink:true, createdAt:"2026-07-15T00:00:00" },
+    { id:2, category:"교육자료", title:"2026 AML 핵심요원 교육자료 PPT", desc:null, hasFile:true, hasLink:false, createdAt:"2026-07-10T00:00:00" },
+    { id:3, category:"서식", title:"실소유자 확인서 서식", desc:"신규 법인 계좌 개설시 사용", hasFile:true, hasLink:false, createdAt:"2026-06-28T00:00:00" }
+  ];
+}
+
+function initDiscuss(){
+  return [
+    { id:1, branch:"정왕본점", author:"김미소", text:"신규 창구직원 대상 AML 기초교육 자료 혹시 다른 지점도 따로 만들어서 쓰시나요? 공유하면 좋을 것 같아요.", createdAt:"2026-08-03T13:20:00" },
+    { id:2, branch:"연성지점", author:"강지혜", text:"저희는 자료실에 올라온 교육자료 그대로 쓰고 있어요. 별도로 만든 건 없습니다!", createdAt:"2026-08-03T14:05:00" },
+    { id:3, branch:"관리자", author:"관리자", text:"다음 주 지점장 회의에서 STR 보고 절차 관련 안건 다룰 예정입니다. 의견 있으신 분은 편하게 남겨주세요.", createdAt:"2026-08-04T09:40:00" }
+  ];
+}
+const NAMES = ["강지수","강지혜","곽우영","김미소","김상돈","김상우","김재연","김정내","김진영","김찬미","김학영","김현성","박충현","박헌민","박형근","송인욱","송현정","오해미","용록중","용선영","유미랑","윤상희","윤여진","윤정윤","이세연","이정민","임현희","장재성","정민기","정세열","조광희","지승하","최진식","홍광석","홍다은","홍순화"].sort((a,b)=>a.localeCompare(b,"ko"));
+function fmt(iso){
+  if(!iso) return "";
+  const d = new Date(iso);
+  const p = n=>String(n).padStart(2,"0");
+  return d.getFullYear()+"."+p(d.getMonth()+1)+"."+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes());
+}
+function shortBranch(name){ return (name||"").replace(/(지점|본점)$/,""); }
+
+class Component extends DCLogic {
+  state = {
+    screen: "login", user: null,
+    loginId: "", loginPw: "", loginErr: false,
+    tab: "qna",
+    qnaFilter: "전체", qnaSearch: "",
+    resFilter: "전체",
+    expandedNoticeId: null,
+    sheet: null, sheetQId: null,
+    answerDraft: "",
+    askForm: { category: CATEGORIES[0], title:"", content:"", author:"" },
+    noticeForm: { title:"", content:"" },
+    resForm: { category: RES_CATEGORIES[0], title:"", desc:"", link:"" },
+    strPw: "", strErr: false, unlockedIds: {},
+    historyClearedAt: 0,
+    toastMsg: null,
+    questions: initQuestions(), notices: initNotices(), resources: initResources(), discussPosts: initDiscuss(),
+    discussDraft: "", discussAuthor: NAMES[0],
+    discussEditId: null, discussEditDraft: "", discussEditAuthor: NAMES[0],
+    nextQId: 6, nextNId: 3, nextRId: 4, nextDId: 4
+  };
+
+  toast(msg){
+    this.setState({ toastMsg: msg });
+    clearTimeout(this._toastTm);
+    this._toastTm = setTimeout(()=>this.setState({ toastMsg: null }), 2200);
+  }
+
+  doLogin(id, pw){
+    const acc = ACCOUNTS[id.trim().toLowerCase()];
+    if (acc && acc.pw === pw) {
+      this.setState({ user: { id: id.trim().toLowerCase(), branch: acc.branch, role: acc.role }, screen: "main", loginErr: false });
+    } else {
+      this.setState({ loginErr: true });
+    }
+  }
+
+  isAdmin(){ return this.state.user && this.state.user.role === "admin"; }
+
+  collectHistoryItems(){
+    const { questions, notices, user } = this.state;
+    const items = [];
+    if (!user) return items;
+    if (this.isAdmin()){
+      questions.forEach(q=>items.push({ time:q.createdAt, icon:"🆕", text:"새 질문", sub:"["+q.branch+"] "+q.title, qId:q.id }));
+    } else {
+      questions.forEach(q=>{ if (q.branch===user.branch && q.answer) items.push({ time:q.answeredAt||q.createdAt, icon:"✅", text:"답변 등록", sub:q.title, qId:q.id }); });
+      notices.forEach(n=>items.push({ time:n.createdAt, icon:"📢", text:"새 공지사항", sub:n.title, notice:true }));
+    }
+    items.sort((a,b)=>new Date(b.time)-new Date(a.time));
+    return items;
+  }
+
+  renderVals(){
+    const s = this.state;
+    const user = s.user;
+    const isLogin = s.screen === "login";
+    const isMain = s.screen === "main";
+    const isAdmin = this.isAdmin();
+
+    const tabDefs = [
+      { key:"qna", label:"질문", icon:"💬" },
+      { key:"notice", label:"공지", icon:"📢" },
+      { key:"res", label:"자료실", icon:"📁" },
+      { key:"faq", label:"FAQ", icon:"⭐" },
+      { key:"discuss", label:"토론방", icon:"🗨️" }
+    ];
+    const bottomTabs = tabDefs.map(t=>({
+      label: t.label, icon: t.icon,
+      color: s.tab===t.key ? "#0056a7" : "#7A8090",
+      weight: s.tab===t.key ? 800 : 500,
+      onClick: ()=>this.setState({ tab: t.key })
+    }));
+
+    let qnaList = s.questions.filter(q=>{
+      if (s.qnaFilter!=="전체" && q.category!==s.qnaFilter) return false;
+      const search = s.qnaSearch.trim().toLowerCase();
+      if (search){
+        const hay = (q.title||"")+(q.content||"")+(q.answer||"");
+        if (hay.toLowerCase().indexOf(search)<0) return false;
+      }
+      return true;
+    }).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+
+    const qnaChips = ["전체"].concat(CATEGORIES).map(c=>({
+      label:c, onClick:()=>this.setState({ qnaFilter:c }),
+      bg: s.qnaFilter===c?"#0056a7":"#fff", border: s.qnaFilter===c?"#0056a7":"#DDE3E8",
+      color: s.qnaFilter===c?"#fff":"#7A8090", weight: s.qnaFilter===c?700:400
+    }));
+    const resChips = ["전체"].concat(RES_CATEGORIES).map(c=>({
+      label:c, onClick:()=>this.setState({ resFilter:c }),
+      bg: s.resFilter===c?"#0056a7":"#fff", border: s.resFilter===c?"#0056a7":"#DDE3E8",
+      color: s.resFilter===c?"#fff":"#7A8090", weight: s.resFilter===c?700:400
+    }));
+
+    const qnaListVals = qnaList.map(q=>({
+      onClick: ()=>this.openQuestion(q.id),
+      catLabel: (q.category==="STR 보고"?"🔒 ":"") + q.category,
+      metaText: q.branch+" · "+q.author+" · "+fmt(q.createdAt),
+      title: q.title,
+      stampBorder: q.answer ? "2px solid #00afd5" : "1.5px solid #7A8090",
+      stampColor: q.answer ? "#00afd5" : "#7A8090",
+      stampTransform: q.answer ? "rotate(-4deg)" : "none",
+      stampLabel: q.answer ? "답변완료" : "답변대기"
+    }));
+
+    const pendingCount = s.questions.filter(q=>!q.answer).length;
+
+    const noticeList = s.notices.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(n=>({
+      title:n.title, content:n.content, dateText: fmt(n.createdAt),
+      open: s.expandedNoticeId===n.id,
+      onClick: ()=>this.setState({ expandedNoticeId: s.expandedNoticeId===n.id?null:n.id }),
+      onDelete: ()=>{ this.setState({ notices: s.notices.filter(x=>x.id!==n.id) }); this.toast("공지가 삭제되었습니다."); }
+    }));
+
+    const resList = s.resources.filter(r=>s.resFilter==="전체"||r.category===s.resFilter)
+      .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(r=>({
+        category:r.category, title:r.title, desc:r.desc, hasFile:r.hasFile, hasLink:r.hasLink, dateText: fmt(r.createdAt),
+        onDelete: ()=>{ this.setState({ resources: s.resources.filter(x=>x.id!==r.id) }); this.toast("자료가 삭제되었습니다."); }
+      }));
+
+    const faqSrc = s.questions.filter(q=>(q.viewCount||0)>0).sort((a,b)=>(b.viewCount||0)-(a.viewCount||0)).slice(0,5);
+    const faqList = faqSrc.map((q,i)=>({
+      rank:i+1, rankColor: RANK_COLORS[i]||"#9AAAC0", title:q.title, sub:q.category+" · "+q.branch, viewCount:q.viewCount||0,
+      onClick: ()=>{ this.setState({ tab:"qna", qnaFilter:"전체", qnaSearch:"" }); this.openQuestion(q.id); }
+    }));
+
+    const activeQRaw = s.sheetQId!=null ? s.questions.find(q=>q.id===s.sheetQId) : null;
+    let activeQ = null;
+    if (activeQRaw){
+      const locked = activeQRaw.category==="STR 보고" && activeQRaw.answer && !isAdmin && !s.unlockedIds[activeQRaw.id];
+      activeQ = {
+        catLabel: (activeQRaw.category==="STR 보고"?"🔒 ":"")+activeQRaw.category,
+        metaText: activeQRaw.branch+" · "+activeQRaw.author+" · "+fmt(activeQRaw.createdAt),
+        title: activeQRaw.title, content: activeQRaw.content,
+        hasAnswer: !!activeQRaw.answer, locked, showAnswer: !!activeQRaw.answer && !locked,
+        answer: activeQRaw.answer, answeredAtText: fmt(activeQRaw.answeredAt),
+        isAdmin, answerBtnLabel: activeQRaw.answer ? "수정 저장" : "답변 등록"
+      };
+    }
+
+    const historyItems = this.collectHistoryItems().filter(it=>new Date(it.time).getTime()>s.historyClearedAt).slice(0,30);
+    const historyList = historyItems.map(it=>({
+      icon: it.icon, text: it.text, sub: it.sub, dateText: fmt(it.time),
+      onClick: ()=>{ if (it.notice) this.setState({ sheet:null, tab:"notice" }); else { this.setState({ sheet:null, tab:"qna" }); this.openQuestion(it.qId); } }
+    }));
+    const bellCount = this.collectHistoryItems().filter(it=>new Date(it.time).getTime()>s.historyClearedAt).length;
+
+    const discussList = s.discussPosts.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(d=>{
+      const canManage = isAdmin || (user && d.branch===user.branch);
+      const editing = s.discussEditId===d.id;
+      return {
+        id:d.id, branch:d.branch, author:d.author, text:d.text, dateText: fmt(d.createdAt),
+        canManage, editing, notEditing: !editing,
+        onEdit: ()=>this.setState({ discussEditId:d.id, discussEditDraft:d.text, discussEditAuthor:d.author }),
+        onDelete: ()=>{ this.setState({ discussPosts:s.discussPosts.filter(x=>x.id!==d.id) }); this.toast("삭제되었습니다."); },
+        onCancelEdit: ()=>this.setState({ discussEditId:null }),
+        onSaveEdit: ()=>this.saveDiscussEdit(d.id)
+      };
+    });
+
+    return {
+      isLogin, isMain,
+      statusBarBg: isLogin ? "#0056a7" : "#0056a7",
+      statusBarColor: "#ffffff",
+      loginId: s.loginId, loginPw: s.loginPw, loginErr: s.loginErr,
+      onLoginIdChange: e=>this.setState({ loginId: e.target.value }),
+      onLoginPwChange: e=>this.setState({ loginPw: e.target.value }),
+      onLoginKeyDown: e=>{ if (e.key==="Enter") this.doLogin(s.loginId, s.loginPw); },
+      onLoginSubmit: ()=>this.doLogin(s.loginId, s.loginPw),
+      onDemoBranch: ()=>this.doLogin("miso06","miso06"),
+      onDemoAdmin: ()=>this.doLogin("miso","miso"),
+
+      shortBranch: user? shortBranch(user.branch):"",
+      roleLabel: isAdmin ? "관리자" : "지점",
+      onOpenHistory: ()=>this.setState({ sheet:"history" }),
+      onLogout: ()=>this.setState({ screen:"login", user:null, loginId:"", loginPw:"", sheetQId:null, sheet:null, tab:"qna" }),
+      bellCount: bellCount>99?"99+":(bellCount>0?String(bellCount):null),
+
+      showPendingBar: isAdmin && pendingCount>0, pendingCount,
+
+      bottomTabs,
+      isQnaTab: s.tab==="qna", isNoticeTab: s.tab==="notice", isResTab: s.tab==="res", isFaqTab: s.tab==="faq", isDiscussTab: s.tab==="discuss",
+      discussDraft: s.discussDraft, onDiscussDraftChange: e=>this.setState({ discussDraft: e.target.value }),
+      discussAuthor: s.discussAuthor, onDiscussAuthorChange: e=>this.setState({ discussAuthor: e.target.value }),
+      discussNames: NAMES,
+      onSubmitDiscuss: ()=>this.submitDiscuss(),
+      discussEmpty: discussList.length===0, discussList,
+      discussEditDraft: s.discussEditDraft, onDiscussEditDraftChange: e=>this.setState({ discussEditDraft: e.target.value }),
+      discussEditAuthor: s.discussEditAuthor, onDiscussEditAuthorChange: e=>this.setState({ discussEditAuthor: e.target.value }),
+
+      qnaChips, qnaSearch: s.qnaSearch, onQnaSearchChange: e=>this.setState({ qnaSearch: e.target.value }),
+      showAskBtn: !isAdmin, onOpenAsk: ()=>this.setState({ sheet:"ask", askForm:{ category: s.qnaFilter!=="전체"&&CATEGORIES.indexOf(s.qnaFilter)>=0?s.qnaFilter:CATEGORIES[0], title:"", content:"", author:"" } }),
+      qnaEmpty: qnaListVals.length===0, qnaList: qnaListVals,
+
+      isAdmin,
+      onOpenNoticeAdd: ()=>this.setState({ sheet:"noticeAdd", noticeForm:{ title:"", content:"" } }),
+      noticeEmpty: noticeList.length===0, noticeList,
+
+      resChips, onOpenResAdd: ()=>this.setState({ sheet:"resAdd", resForm:{ category: s.resFilter!=="전체"&&RES_CATEGORIES.indexOf(s.resFilter)>=0?s.resFilter:RES_CATEGORIES[0], title:"", desc:"", link:"" } }),
+      resEmpty: resList.length===0, resList,
+
+      faqEmpty: faqList.length===0, faqList,
+
+      sheetOpen: !!s.sheet, sheetIsQuestion: s.sheet==="question", sheetIsAsk: s.sheet==="ask",
+      sheetIsNoticeAdd: s.sheet==="noticeAdd", sheetIsResAdd: s.sheet==="resAdd", sheetIsHistory: s.sheet==="history",
+      sheetTitle: s.sheet==="question" ? "질문 상세" : s.sheet==="ask" ? "질문 등록" : s.sheet==="noticeAdd" ? "공지 등록" : s.sheet==="resAdd" ? "자료 등록" : s.sheet==="history" ? "알림 내역" : "",
+      onCloseSheet: ()=>this.setState({ sheet:null }),
+
+      activeQ,
+      answerDraft: s.answerDraft, onAnswerDraftChange: e=>this.setState({ answerDraft: e.target.value }),
+      onSubmitAnswer: ()=>this.submitAnswer(),
+      onDeleteQuestion: ()=>this.deleteQuestion(),
+      onOpenStrUnlock: ()=>this.setState({ sheet:null, strModalOpenId: s.sheetQId, strPw:"", strErr:false }),
+
+      categories: CATEGORIES, resCategories: RES_CATEGORIES,
+      askForm: s.askForm, userBranchFull: user?user.branch:"",
+      onAskCategoryChange: e=>this.setState({ askForm:{...s.askForm, category:e.target.value} }),
+      onAskTitleChange: e=>this.setState({ askForm:{...s.askForm, title:e.target.value} }),
+      onAskContentChange: e=>this.setState({ askForm:{...s.askForm, content:e.target.value} }),
+      onAskAuthorChange: e=>this.setState({ askForm:{...s.askForm, author:e.target.value} }),
+      onSubmitAsk: ()=>this.submitAsk(),
+
+      noticeForm: s.noticeForm,
+      onNoticeTitleChange: e=>this.setState({ noticeForm:{...s.noticeForm, title:e.target.value} }),
+      onNoticeContentChange: e=>this.setState({ noticeForm:{...s.noticeForm, content:e.target.value} }),
+      onSubmitNotice: ()=>this.submitNotice(),
+
+      resForm: s.resForm,
+      onResCategoryChange: e=>this.setState({ resForm:{...s.resForm, category:e.target.value} }),
+      onResTitleChange: e=>this.setState({ resForm:{...s.resForm, title:e.target.value} }),
+      onResDescChange: e=>this.setState({ resForm:{...s.resForm, desc:e.target.value} }),
+      onResLinkChange: e=>this.setState({ resForm:{...s.resForm, link:e.target.value} }),
+      onSubmitRes: ()=>this.submitRes(),
+
+      historyEmpty: historyList.length===0, historyList,
+      onClearHistory: ()=>{ this.setState({ historyClearedAt: Date.now() }); this.toast("알림 내역을 모두 확인 처리했습니다."); },
+
+      strModalOpen: !!s.strModalOpenId,
+      strPw: s.strPw, strErr: s.strErr,
+      onStrPwChange: e=>this.setState({ strPw: e.target.value, strErr:false }),
+      onStrConfirm: ()=>this.confirmStr(),
+      onStrCancel: ()=>this.setState({ strModalOpenId:null, strPw:"", strErr:false }),
+
+      toastMsg: s.toastMsg
+    };
+  }
+
+  openQuestion(id){
+    const q = this.state.questions.find(x=>x.id===id);
+    if (q) q.viewCount = (q.viewCount||0)+1;
+    this.setState({ sheet:"question", sheetQId:id, answerDraft: q&&q.answer?q.answer:"" });
+  }
+
+  submitAnswer(){
+    const s = this.state;
+    if (!s.answerDraft.trim()){ this.toast("답변 내용을 입력해주세요."); return; }
+    const questions = s.questions.map(q=>q.id===s.sheetQId?{...q, answer:s.answerDraft.trim(), answeredAt:new Date().toISOString()}:q);
+    this.setState({ questions });
+    this.toast("답변이 등록되었습니다.");
+  }
+  deleteQuestion(){
+    const s = this.state;
+    this.setState({ questions: s.questions.filter(q=>q.id!==s.sheetQId), sheet:null, sheetQId:null });
+    this.toast("질문이 삭제되었습니다.");
+  }
+  submitAsk(){
+    const s = this.state;
+    const f = s.askForm;
+    if (!f.title.trim() || !f.content.trim()){ this.toast("제목과 내용을 입력해주세요."); return; }
+    const q = { id:s.nextQId, category:f.category, branch:s.user.branch, author:f.author.trim()||"미입력", title:f.title.trim(), content:f.content.trim(), answer:null, answeredAt:null, createdAt:new Date().toISOString(), viewCount:0 };
+    this.setState({ questions:[q,...s.questions], nextQId:s.nextQId+1, sheet:null });
+    this.toast("질문이 등록되었습니다.");
+  }
+  submitNotice(){
+    const s = this.state; const f = s.noticeForm;
+    if (!f.title.trim() || !f.content.trim()){ this.toast("제목과 내용을 입력해주세요."); return; }
+    const n = { id:s.nextNId, title:f.title.trim(), content:f.content.trim(), createdAt:new Date().toISOString() };
+    this.setState({ notices:[n,...s.notices], nextNId:s.nextNId+1, sheet:null });
+    this.toast("공지가 등록되었습니다.");
+  }
+  submitRes(){
+    const s = this.state; const f = s.resForm;
+    if (!f.title.trim()){ this.toast("자료 제목을 입력해주세요."); return; }
+    const r = { id:s.nextRId, category:f.category, title:f.title.trim(), desc:f.desc.trim()||null, hasFile:true, hasLink:!!f.link.trim(), createdAt:new Date().toISOString() };
+    this.setState({ resources:[r,...s.resources], nextRId:s.nextRId+1, sheet:null });
+    this.toast("자료가 등록되었습니다.");
+  }
+  submitDiscuss(){
+    const s = this.state;
+    if (!s.discussDraft.trim()){ this.toast("내용을 입력해주세요."); return; }
+    const post = { id:s.nextDId, branch:s.user.branch, author: s.discussAuthor, text:s.discussDraft.trim(), createdAt:new Date().toISOString() };
+    this.setState({ discussPosts:[post,...s.discussPosts], nextDId:s.nextDId+1, discussDraft:"" });
+    this.toast("등록되었습니다.");
+  }
+  saveDiscussEdit(id){
+    const s = this.state;
+    if (!s.discussEditDraft.trim()){ this.toast("내용을 입력해주세요."); return; }
+    const discussPosts = s.discussPosts.map(d=>d.id===id?{...d, text:s.discussEditDraft.trim(), author:s.discussEditAuthor}:d);
+    this.setState({ discussPosts, discussEditId:null });
+    this.toast("수정되었습니다.");
+  }
+  confirmStr(){
+    const s = this.state;
+    const acc = s.user && ACCOUNTS[s.user.id];
+    if (acc && acc.pw === s.strPw){
+      this.setState({ unlockedIds: {...s.unlockedIds, [s.strModalOpenId]: true}, strModalOpenId:null, strPw:"", strErr:false, sheet:"question", sheetQId:s.strModalOpenId });
+    } else {
+      this.setState({ strErr:true });
+    }
+  }
+}
+
+</script>
+</body>
+</html>
