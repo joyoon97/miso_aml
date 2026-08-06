@@ -162,7 +162,7 @@
   #chatComposer {
     position: fixed; left: 0; right: 0; bottom: 56px; z-index: 89;
     max-width: 860px; margin: 0 auto; background: #fff; border-top: 1px solid var(--line);
-    display: flex; gap: 8px; align-items: flex-end; padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column;
   }
   #discussSection.hidden ~ #chatComposer, #discussSection.hidden + #chatComposer { display: none; }
   #discussDraft {
@@ -172,6 +172,20 @@
   #discussSendBtn {
     flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; border: none;
     background: var(--navy); color: #fff; font-size: 16px; padding: 0;
+  }
+  #discussAttachBtn {
+    flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line);
+    background: var(--paper); color: var(--navy); font-size: 16px; padding: 0;
+  }
+  .discussFileChip {
+    position: relative; display: inline-flex; align-items: center; gap: 4px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
+    padding: 5px 8px; font-size: 11px; color: var(--navy);
+  }
+  .discussFileChip img { width: 34px; height: 34px; object-fit: cover; border-radius: 6px; }
+  .discussFileChip .rmBtn {
+    background: var(--muted); color: #fff; border-radius: 50%; width: 15px; height: 15px;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 10px; border: none; padding: 0; margin-left: 2px;
   }
 
   /* ── 컨트롤/목록 */
@@ -470,17 +484,24 @@
 
   <!-- 토론(자유게시판) -->
   <div id="discussSection" class="hidden">
-    <div class="controls" style="margin:10px 0 4px">
-      <p class="metaText" style="margin:0">전 지점 직원이 함께 보는 자유 토론방입니다. 고객 실명·계좌번호 등 개인정보는 입력하지 마세요.</p>
+    <div class="controls" style="margin:10px 0 4px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <p class="metaText" style="margin:0;flex:1">전 지점 직원이 함께 보는 자유 토론방입니다. 고객 실명·계좌번호 등 개인정보는 입력하지 마세요.</p>
+      <button id="discussMuteBtn" onclick="toggleDiscussMute()" style="flex-shrink:0;background:var(--paper);border:1px solid var(--line);
+        border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;color:var(--navy);white-space:nowrap">🔔 알림 켜짐</button>
     </div>
     <div id="discussList" style="display:flex;flex-direction:column;gap:12px;padding:0 16px 150px"></div>
   </div>
 
   <!-- 토론 채팅 입력창 (하단 고정) -->
   <div id="chatComposer">
-    <select class="sel" id="discussAuthor" style="width:92px;flex-shrink:0;font-size:12.5px;padding:9px 6px"></select>
-    <textarea id="discussDraft" rows="1" placeholder="메시지 입력" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitDiscuss();}"></textarea>
-    <button id="discussSendBtn" onclick="submitDiscuss()" aria-label="전송">➤</button>
+    <div id="discussFilePreview" class="hidden" style="display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px 0"></div>
+    <div style="display:flex;gap:8px;align-items:flex-end;padding:8px 12px calc(8px + env(safe-area-inset-bottom))">
+      <input type="file" id="discussFiles" accept="image/*,.pdf,.hwp,.hwpx,.doc,.docx,.ppt,.pptx" capture="environment" multiple style="display:none" onchange="previewDiscussFiles()">
+      <button id="discussAttachBtn" onclick="document.getElementById('discussFiles').click()" aria-label="파일 첨부">📎</button>
+      <select class="sel" id="discussAuthor" style="width:92px;flex-shrink:0;font-size:12.5px;padding:9px 6px"></select>
+      <textarea id="discussDraft" rows="1" placeholder="메시지 입력" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitDiscuss();}"></textarea>
+      <button id="discussSendBtn" onclick="submitDiscuss()" aria-label="전송">➤</button>
+    </div>
   </div>
 
   <footer id="pageFooter" style="padding-bottom:100px">
@@ -922,7 +943,7 @@
     $("pageFooter").classList.toggle("hidden", t==="discuss");
     if (t === "notice") renderNotices();
     if (t === "popular") renderPopular();
-    if (t === "discuss") { renderDiscuss(); markDiscussSeen(); }
+    if (t === "discuss") { renderDiscuss(); markDiscussSeen(); updateDiscussMuteButton(); }
     if (t !== "discuss") window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
   }
 
@@ -1382,10 +1403,13 @@
       var avatar = isMe ? '' :
         '<div class="chatAvatar'+(isAdminAuthor?' admin':'')+'">'+esc(nameInitials(d.author))+'</div>';
 
+      var fileChips = d.files && d.files.length
+        ? '<div style="margin-top:6px">'+renderFileChips(d.files)+'</div>' : '';
+
       out.push('<div class="'+rowCls+'">' +
         avatar +
         '<div class="chatBubbleWrap">' +
-          '<div class="chatBubble">'+esc(d.text)+'</div>' +
+          '<div class="chatBubble">'+(d.text && d.text !== "(첨부파일)" ? esc(d.text) : '')+fileChips+'</div>' +
           '<div class="chatMeta"><span class="chatTime">'+fmtChatTime(d.created_at)+'</span>'+actions+'</div>' +
         '</div>' +
       '</div>');
@@ -1397,14 +1421,64 @@
   async function submitDiscuss(){
     var author = $("discussAuthor").value;
     var text = $("discussDraft").value.trim();
-    if (!text) { toast("내용을 입력해주세요."); return; }
+    var fileInput = $("discussFiles");
+    var files = Array.prototype.slice.call(fileInput.files || []);
+    if (!text && files.length === 0) { toast("내용을 입력해주세요."); return; }
+    if (files.length > 3) { toast("첨부는 최대 3개까지 가능합니다."); return; }
+    $("discussSendBtn").disabled = true;
     try {
-      var res = await db.from("discuss").insert({ author: author, branch: user.branch, text: text });
+      var uploaded = [];
+      for (var i = 0; i < files.length; i++) {
+        var f = files[i];
+        if (f.size > 20 * 1024 * 1024) { toast("첨부 파일은 1개당 20MB 이하만 가능합니다."); $("discussSendBtn").disabled = false; return; }
+        var ext = (f.name.split(".").pop() || "bin").toLowerCase();
+        var path = Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7) + "." + ext;
+        var up = await db.storage.from("files").upload(path, f);
+        if (up.error) throw up.error;
+        var pub = db.storage.from("files").getPublicUrl(path);
+        uploaded.push({ url: pub.data.publicUrl, name: f.name });
+      }
+      var res = await db.from("discuss").insert({
+        author: author, branch: user.branch, text: text || "(첨부파일)",
+        files: uploaded.length ? uploaded : null
+      });
       if (res.error) throw res.error;
       $("discussDraft").value = "";
-      toast("등록되었습니다.");
+      fileInput.value = "";
+      $("discussFilePreview").innerHTML = "";
+      $("discussFilePreview").classList.add("hidden");
       await loadData();
-    } catch(e) { toast("등록 실패: " + (e && e.message ? e.message : String(e))); }
+    } catch(e) {
+      toast("등록 실패: " + (e && e.message ? e.message : String(e)));
+    } finally {
+      $("discussSendBtn").disabled = false;
+    }
+  }
+
+  function previewDiscussFiles(){
+    var input = $("discussFiles");
+    var files = Array.prototype.slice.call(input.files || []);
+    var el = $("discussFilePreview");
+    if (files.length > 3) toast("첨부는 최대 3개까지 가능합니다.");
+    if (files.length === 0) { el.innerHTML = ""; el.classList.add("hidden"); return; }
+    el.classList.remove("hidden");
+    el.innerHTML = files.slice(0, 3).map(function(f, idx){
+      var inner = (f.type && f.type.indexOf("image/") === 0)
+        ? '<img src="'+URL.createObjectURL(f)+'">'
+        : '<span>📎 '+esc(f.name.length > 10 ? f.name.slice(0,9)+'…' : f.name)+'</span>';
+      return '<span class="discussFileChip">'+inner+
+        '<button class="rmBtn" onclick="removeDiscussFile('+idx+')" aria-label="삭제">✕</button></span>';
+    }).join("");
+  }
+
+  function removeDiscussFile(idx){
+    var input = $("discussFiles");
+    try {
+      var dt = new DataTransfer();
+      Array.prototype.forEach.call(input.files, function(f, i){ if (i !== idx) dt.items.add(f); });
+      input.files = dt.files;
+    } catch(e){}
+    previewDiscussFiles();
   }
 
   function editDiscuss(id){ discussEditMode[id] = true; renderDiscuss(); }
@@ -1799,6 +1873,52 @@
       var sub = await reg.pushManager.getSubscription();
       if (sub) await db.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
     } catch(e){}
+  }
+
+  // ═══ 토론방 알림 끄기/켜기 ═══
+  async function getCurrentPushEndpoint(){
+    try {
+      if (!("serviceWorker" in navigator)) return null;
+      var reg = await navigator.serviceWorker.ready;
+      var sub = await reg.pushManager.getSubscription();
+      return sub ? sub.endpoint : null;
+    } catch(e){ return null; }
+  }
+
+  function setMuteBtnUI(muted){
+    var btn = $("discussMuteBtn");
+    if (!btn) return;
+    btn.textContent = muted ? "🔕 알림 꺼짐" : "🔔 알림 켜짐";
+    btn.style.color = muted ? "var(--muted)" : "var(--navy)";
+  }
+
+  async function updateDiscussMuteButton(){
+    var endpoint = await getCurrentPushEndpoint();
+    if (!endpoint) { setMuteBtnUI(false); return; }
+    try {
+      var res = await db.from("push_subscriptions").select("discuss_muted").eq("endpoint", endpoint);
+      var row = res && res.data && res.data[0];
+      setMuteBtnUI(!!(row && row.discuss_muted));
+    } catch(e){ setMuteBtnUI(false); }
+  }
+
+  async function toggleDiscussMute(){
+    var endpoint = await getCurrentPushEndpoint();
+    if (!endpoint) {
+      toast("먼저 알림을 켜주세요 (로그인 화면의 '알림 받기' 또는 종 아이콘 → 알림 설정 진단).");
+      return;
+    }
+    try {
+      var res = await db.from("push_subscriptions").select("discuss_muted").eq("endpoint", endpoint);
+      var row = res && res.data && res.data[0];
+      var newVal = !(row && row.discuss_muted);
+      var upd = await db.from("push_subscriptions").update({ discuss_muted: newVal }).eq("endpoint", endpoint);
+      if (upd.error) throw upd.error;
+      setMuteBtnUI(newVal);
+      toast(newVal ? "토론방 알림을 껐습니다." : "토론방 알림을 켰습니다.");
+    } catch(e){
+      toast("설정 실패: " + (e && e.message ? e.message : String(e)));
+    }
   }
 
   // ═══ 실시간 자동 갱신 ═══

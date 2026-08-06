@@ -41,10 +41,10 @@ Deno.serve(async (req) => {
       const { data } = await supabase.from("push_subscriptions").select("*");
       targets = data || [];
     } else if (table === "discuss" && type === "INSERT") {
-      // 새 토론 글 → 전 지점 + 관리자 전원에게 (알림 내역에는 남기지 않고 푸시/배지만)
+      // 새 토론 글 → 전 지점 + 관리자 전원에게 (알림 내역에는 남기지 않고 푸시/배지만, 토론 알림을 끈 기기는 제외)
       title = "새 토론 글이 등록되었습니다";
       body = (record.author || "") + ": " + (record.text || "");
-      const { data } = await supabase.from("push_subscriptions").select("*");
+      const { data } = await supabase.from("push_subscriptions").select("*").eq("discuss_muted", false);
       targets = data || [];
     } else if (table === "questions" && type === "INSERT") {
       title = "새 질문이 등록되었습니다";
