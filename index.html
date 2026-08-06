@@ -139,11 +139,12 @@
   .chatRow { display: flex; gap: 8px; align-items: flex-end; }
   .chatRow.me { flex-direction: row-reverse; }
   .chatAvatar {
-    flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%;
-    background: var(--navy); color: #fff; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; font-size: 9.5px; font-weight: 800;
-    line-height: 1.25; letter-spacing: -0.02em;
+    flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%;
+    background: var(--navy); color: #fff; display: flex;
+    align-items: center; justify-content: center; font-size: 12px; font-weight: 800;
+    letter-spacing: -0.02em;
   }
+  .chatAvatar.admin { background: var(--cyan); }
   .chatBubbleWrap { max-width: 100%; display: flex; align-items: flex-end; gap: 5px; }
   .chatRow.me .chatBubbleWrap { flex-direction: row-reverse; }
   .chatBubble {
@@ -410,7 +411,6 @@
       <div>
         <div class="eyebrow"><img class="ciLogo" src="icons/logo.png" alt="">미소신용협동조합 · 평생어부바 🐷</div>
         <h1>자금세탁방지 Q&A</h1>
-        <p class="subText" id="roleLabelText">계정으로 로그인됨</p>
       </div>
     </div>
     <div class="pendingBar hidden" id="pendingBar"></div>
@@ -493,7 +493,9 @@
     <button class="navBtn" id="navNotice" onclick="switchTab('notice')"><span>📢</span>공지</button>
     <button class="navBtn" id="navRes" onclick="switchTab('res')"><span>📁</span>자료</button>
     <button class="navBtn" id="navPopular" onclick="switchTab('popular')"><span>⭐</span>FAQ</button>
-    <button class="navBtn" id="navDiscuss" onclick="switchTab('discuss')"><span>💬</span>토론</button>
+    <button class="navBtn" id="navDiscuss" onclick="switchTab('discuss')">
+      <span style="position:relative;display:inline-block">💬<span id="discussNavBadge" class="hidden" style="position:absolute;top:-3px;right:-9px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;background:#E4402A;color:#fff;font-size:9px;font-weight:800;line-height:15px;text-align:center;box-shadow:0 0 0 2px #fff">0</span></span>토론
+    </button>
   </nav>
 </div>
 
@@ -765,7 +767,6 @@
     $("loginPage").classList.add("hidden");
     $("mainPage").classList.remove("hidden");
     $("userTag").textContent = shortBranch(user.branch);
-    $("roleLabelText").textContent = user.branch + " 계정으로 로그인됨";
     $("qBranch").textContent = user.branch;
     $("rBranch").textContent = user.branch;
     $("askBtn").classList.toggle("hidden", isAdmin());
@@ -921,7 +922,7 @@
     $("pageFooter").classList.toggle("hidden", t==="discuss");
     if (t === "notice") renderNotices();
     if (t === "popular") renderPopular();
-    if (t === "discuss") renderDiscuss();
+    if (t === "discuss") { renderDiscuss(); markDiscussSeen(); }
     if (t !== "discuss") window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
   }
 
@@ -937,7 +938,7 @@
       resources = r.data || [];
       notices = (n && n.data) || [];
       discussPosts = (d && d.data) || [];
-      renderQna(); renderRes(); renderPending(); renderPopular(); updateBellBadge();
+      renderQna(); renderRes(); renderPending(); renderPopular(); updateBellBadge(); updateDiscussBadge();
       if (!$("noticeSection").classList.contains("hidden")) renderNotices();
       if (!$("discussSection").classList.contains("hidden")) renderDiscuss();
       refreshOpenDetail();
@@ -1163,6 +1164,31 @@
     }
   }
 
+  function discussSeenKey(){ return "misoAmlDiscussSeen_" + (user ? user.id : ""); }
+  function markDiscussSeen(){
+    try { localStorage.setItem(discussSeenKey(), new Date().toISOString()); } catch(e){}
+    updateDiscussBadge();
+  }
+  function updateDiscussBadge(){
+    if (!user) return;
+    var badge = $("discussNavBadge");
+    if (!badge) return;
+    var seenAt = 0;
+    try {
+      var s = localStorage.getItem(discussSeenKey());
+      if (s) seenAt = new Date(s).getTime();
+    } catch(e){}
+    var n = discussPosts.filter(function(d){
+      return d.branch !== user.branch && new Date(d.created_at).getTime() > seenAt;
+    }).length;
+    if (n > 0) {
+      badge.textContent = n > 99 ? "99+" : String(n);
+      badge.classList.remove("hidden");
+    } else {
+      badge.classList.add("hidden");
+    }
+  }
+
   function clearHistory(){
     try { localStorage.setItem(historyClearedKey(), new Date().toISOString()); } catch(e){}
     openHistory();
@@ -1297,6 +1323,16 @@
   // ── 토론(자유게시판)
   var discussEditMode = {};
 
+  function chatDateKey(iso){
+    var d = new Date(iso);
+    return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+  }
+  function chatDateLabel(iso){
+    var d = new Date(iso);
+    var days = ["일","월","화","수","목","금","토"];
+    return d.getFullYear() + "년 " + (d.getMonth()+1) + "월 " + d.getDate() + "일 (" + days[d.getDay()] + ")";
+  }
+
   function renderDiscuss(){
     var el = $("discussList");
     if (discussPosts.length === 0) {
@@ -1304,15 +1340,26 @@
       return;
     }
     var ordered = discussPosts.slice().reverse(); // 채팅처럼 오래된 순 → 최신이 아래
-    el.innerHTML = ordered.map(function(d){
+    var out = [];
+    var lastDateKey = null;
+    ordered.forEach(function(d){
+      var dk = chatDateKey(d.created_at);
+      if (dk !== lastDateKey) {
+        out.push('<div style="text-align:center;margin:6px 0">' +
+          '<span style="background:var(--line);color:var(--muted);font-size:11px;font-weight:700;' +
+          'padding:4px 12px;border-radius:999px;display:inline-block">' + esc(chatDateLabel(d.created_at)) + '</span></div>');
+        lastDateKey = dk;
+      }
+
       var isMe = d.branch === user.branch;
+      var isAdminAuthor = d.branch === "관리자";
       var canManage = isAdmin() || isMe;
       var editing = !!discussEditMode[d.id];
       var rowCls = "chatRow" + (isMe ? " me" : "");
 
       if (editing) {
         var opts = NAMES.map(function(n){ return '<option'+(n===d.author?' selected':'')+'>'+esc(n)+'</option>'; }).join("");
-        return '<div class="'+rowCls+'"><div class="chatBubbleWrap" style="max-width:88%;width:100%">' +
+        out.push('<div class="'+rowCls+'"><div class="chatBubbleWrap" style="max-width:88%;width:100%">' +
           '<div class="card" style="padding:10px;width:100%">' +
             '<select class="sel" id="dEditAuthor_'+esc(d.id)+'" style="width:100%;margin-bottom:6px;font-size:12.5px">'+opts+'</select>' +
             '<textarea class="ta" id="dEditText_'+esc(d.id)+'" rows="2" style="margin-bottom:6px;font-size:13px">'+esc(d.text)+'</textarea>' +
@@ -1321,7 +1368,8 @@
               '<button class="btnGhost" style="padding:6px 12px;font-size:12px" onclick="cancelDiscussEdit(\''+esc(d.id)+'\')">취소</button>' +
             '</div>' +
           '</div>' +
-        '</div></div>';
+        '</div></div>');
+        return;
       }
 
       var actions = canManage
@@ -1332,16 +1380,17 @@
         : '';
 
       var avatar = isMe ? '' :
-        '<div class="chatAvatar"><span>'+esc(branchInitials(d.branch))+'</span><span>'+esc(nameInitials(d.author))+'</span></div>';
+        '<div class="chatAvatar'+(isAdminAuthor?' admin':'')+'">'+esc(nameInitials(d.author))+'</div>';
 
-      return '<div class="'+rowCls+'">' +
+      out.push('<div class="'+rowCls+'">' +
         avatar +
         '<div class="chatBubbleWrap">' +
           '<div class="chatBubble">'+esc(d.text)+'</div>' +
           '<div class="chatMeta"><span class="chatTime">'+fmtChatTime(d.created_at)+'</span>'+actions+'</div>' +
         '</div>' +
-      '</div>';
-    }).join("");
+      '</div>');
+    });
+    el.innerHTML = out.join("");
     el.scrollIntoView && el.lastElementChild && el.lastElementChild.scrollIntoView({ block: "end" });
   }
 
