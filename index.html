@@ -585,9 +585,37 @@
     <h2 class="modalTitle" id="nModalTitle">공지 등록</h2>
     <input class="inp" id="nTitle" placeholder="제목">
     <textarea class="ta" id="nContent" rows="6" placeholder="공지 내용"></textarea>
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--navy);font-weight:700;margin-bottom:8px">
+      <input type="checkbox" id="nBanner" style="width:16px;height:16px" onchange="$('nBannerDaysRow').classList.toggle('hidden', !this.checked)">
+      앱 실행 시 배너로 표시
+    </label>
+    <div id="nBannerDaysRow" class="hidden" style="display:flex;align-items:center;gap:8px;margin:-2px 0 10px">
+      <span style="font-size:13px;color:var(--muted)">표시 기간</span>
+      <input class="inp" id="nBannerDays" type="number" min="1" max="30" value="3" style="width:70px;margin:0;text-align:center">
+      <span style="font-size:13px;color:var(--muted)">일간</span>
+    </div>
     <div class="btnRow">
       <button class="btnMain" id="nSubmit" onclick="submitNotice()">등록</button>
       <button class="btnGhost" onclick="resetNForm();closeModal('nModal')">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 공지 배너 팝업 -->
+<div class="hidden" id="bannerOverlay" style="position:fixed;inset:0;z-index:150;background:rgba(27,42,74,.55);
+  display:flex;align-items:center;justify-content:center;padding:24px">
+  <div style="background:#fff;border-radius:16px;max-width:420px;width:100%;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.35)">
+    <div style="background:var(--navy);padding:16px 20px">
+      <div style="color:var(--yellow);font-size:11px;font-weight:800;letter-spacing:.05em">📢 공지사항</div>
+      <div id="bannerTitle" style="color:#fff;font-size:17px;font-weight:800;margin-top:5px;line-height:1.4"></div>
+    </div>
+    <div style="padding:18px 20px">
+      <p id="bannerContent" class="qText" style="margin:0 0 18px;max-height:35vh;overflow-y:auto"></p>
+      <button class="btnMain" style="width:100%" onclick="closeBanner()">확인</button>
+      <div style="text-align:center;margin-top:12px">
+        <button onclick="dismissBannerToday()" style="background:none;border:none;color:var(--muted);
+          font-size:12px;text-decoration:underline;padding:4px">오늘 하루 보지 않기</button>
+      </div>
     </div>
   </div>
 </div>
@@ -861,12 +889,43 @@
 
   function logout(){
     removePush();
-    user = null; expandedId = null;
+    user = null; expandedId = null; bannerChecked = false;
     try { localStorage.removeItem("misoAmlUser"); } catch(e){}
     $("mainPage").classList.add("hidden");
     $("loginPage").classList.remove("hidden");
     $("loginId").value = ""; $("loginPw").value = "";
     switchTab("qna");
+  }
+
+  // ═══ 공지 배너 ═══
+  var bannerChecked = false;
+  function bannerDismissKey(n){ return "misoAmlBannerDismiss_" + n.id; }
+
+  function checkBanner(){
+    var today = new Date(); today.setHours(0,0,0,0);
+    var candidates = notices.filter(function(n){
+      return n.banner_enabled && n.banner_until && new Date(n.banner_until + "T23:59:59") >= today;
+    });
+    if (candidates.length === 0) return;
+    candidates.sort(function(a,b){ return new Date(b.created_at) - new Date(a.created_at); });
+    var n = candidates[0];
+    var todayStr = today.toISOString().slice(0, 10);
+    try {
+      if (localStorage.getItem(bannerDismissKey(n)) === todayStr) return;
+    } catch(e){}
+    $("bannerTitle").textContent = n.title;
+    $("bannerContent").textContent = n.content;
+    $("bannerOverlay").dataset.noticeId = n.id;
+    $("bannerOverlay").classList.remove("hidden");
+  }
+  function closeBanner(){ $("bannerOverlay").classList.add("hidden"); }
+  function dismissBannerToday(){
+    var id = $("bannerOverlay").dataset.noticeId;
+    try {
+      var today = new Date(); today.setHours(0,0,0,0);
+      localStorage.setItem("misoAmlBannerDismiss_" + id, today.toISOString().slice(0, 10));
+    } catch(e){}
+    closeBanner();
   }
 
   // ── 초기화
@@ -963,6 +1022,7 @@
       if (!$("noticeSection").classList.contains("hidden")) renderNotices();
       if (!$("discussSection").classList.contains("hidden")) renderDiscuss();
       refreshOpenDetail();
+      if (!bannerChecked) { bannerChecked = true; checkBanner(); }
     } catch (e) {
       toast("데이터를 불러오지 못했습니다. 연결 정보를 확인해주세요.");
       $("qnaList").innerHTML = '<div class="empty">데이터를 불러오지 못했습니다.</div>';
@@ -1293,6 +1353,8 @@
     $("nModalTitle").textContent = "공지 등록";
     $("nSubmit").textContent = "등록";
     $("nTitle").value = ""; $("nContent").value = "";
+    $("nBanner").checked = false; $("nBannerDays").value = 3;
+    $("nBannerDaysRow").classList.add("hidden");
   }
 
   function openEditNotice(id){
@@ -1304,6 +1366,14 @@
     $("nSubmit").textContent = "수정 저장";
     $("nTitle").value = n.title || "";
     $("nContent").value = n.content || "";
+    $("nBanner").checked = !!n.banner_enabled;
+    $("nBannerDaysRow").classList.toggle("hidden", !n.banner_enabled);
+    if (n.banner_until) {
+      var days = Math.max(1, Math.ceil((new Date(n.banner_until) - new Date()) / 86400000));
+      $("nBannerDays").value = days;
+    } else {
+      $("nBannerDays").value = 3;
+    }
     openModal("nModal");
   }
 
@@ -1311,13 +1381,22 @@
     var title = $("nTitle").value.trim(), content = $("nContent").value.trim();
     if (!title || !content) { toast("제목과 내용을 입력해주세요."); return; }
     var isEdit = !!editingNoticeId;
+    var bannerOn = $("nBanner").checked;
+    var payload = { title: title, content: content, banner_enabled: bannerOn };
+    if (bannerOn) {
+      var days = Math.max(1, Math.min(30, parseInt($("nBannerDays").value, 10) || 3));
+      var until = new Date(); until.setDate(until.getDate() + days);
+      payload.banner_until = until.toISOString().slice(0, 10);
+    } else {
+      payload.banner_until = null;
+    }
     $("nSubmit").disabled = true; $("nSubmit").textContent = isEdit ? "저장 중…" : "등록 중…";
     try {
       var res;
       if (isEdit) {
-        res = await db.from("notices").update({ title: title, content: content }).eq("id", editingNoticeId);
+        res = await db.from("notices").update(payload).eq("id", editingNoticeId);
       } else {
-        res = await db.from("notices").insert({ title: title, content: content });
+        res = await db.from("notices").insert(payload);
       }
       if (res.error) throw res.error;
       resetNForm();
